@@ -1183,7 +1183,22 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--browser", action="store_true", help="open in your web browser instead of a window")
     ap.add_argument("--offline", action="store_true", help="no cover lookup")
     ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--selftest", action="store_true", help="check this install has everything it needs, then exit")
+    ap.add_argument("--version", action="store_true", help="print the version and exit")
+    ap.add_argument("--log", help="with --selftest: also write the result to this file")
     args = ap.parse_args(argv)
+    if args.version:
+        print(about.version_line())
+        return
+    if args.selftest:
+        from . import selftest
+        problems = selftest.run()
+        lines = [f"PROBLEM: {p}" for p in problems] + ["self-test " + ("FAILED" if problems else "passed")]
+        for line in lines:
+            print(line)
+        if args.log:                       # a windowed Windows build has no console to print to
+            Path(args.log).write_text("\n".join(lines) + "\n", encoding="utf-8")
+        raise SystemExit(1 if problems else 0)
 
     ctl = make_controller(args.offline)
     register_routes(ctl)
