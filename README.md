@@ -1,0 +1,136 @@
+# MiniBook Studio
+
+Turns your reading list (a StoryGraph or Goodreads CSV, or titles you type in) into print-ready wraps for
+mini books: back, spine and front on one sheet with cut and fold marks, covers found automatically, and a
+live preview. Output is PDF or SVG, for any mini book made from same-size boards. See `REQUIREMENTS.md` for the
+full plan, phase tags and a table of what has and has not been verified.
+
+MiniBook Studio is an independent project. It is not made by, or affiliated with, StoryGraph, Goodreads or
+Amazon. Covers come from Open Library, Google Books and Amazon's public image addresses and are downloaded
+to your own computer, never redistributed. Licensed under the MIT licence (`LICENSE`); the bundled DejaVu
+Sans Condensed font keeps its own licence (`assets/fonts/LICENSE-DejaVu.txt`).
+
+**Status:** engine and GUI logic are built and tested, and the window has been run on Linux. Parts of the
+GUI have only been tested against a stand-in for NiceGUI, so report any rough edges. Packaged downloads for
+Windows, Mac and Linux are the next step. The command-line runner works without the GUI.
+
+## Setup (Windows or Linux, Python 3.12)
+
+    python -m venv .venv
+    # Windows:  .venv\Scripts\activate        Linux:  source .venv/bin/activate
+    pip install -r requirements.txt
+
+On Debian/Ubuntu the virtual environment is **required**: without it pip stops with
+"externally-managed-environment". Do not work around that with `--break-system-packages`.
+
+On Linux, pywebview needs a Qt or GTK backend for the standalone window:
+`pip install "pywebview[qt]"`. If the window does not open, use `--browser`.
+
+## Start with the checks (2 minutes)
+
+    # 1. Do the cover sources work from your machine, and for which of your books?
+    python -m minibook check-covers --csv your_export.csv --year 2026 --limit 8
+
+    # 2. Does the window open?
+    python minibook_gui.py            # standalone window
+    python minibook_gui.py --browser  # or in your browser
+
+If 2 fails, copy the error text and send it back: that is exactly what is still unverified.
+
+## Using the app
+
+The window has two tabs.
+
+**Books tab**
+1. Drop in your StoryGraph CSV (or add books by hand). Pick the year; read books with no date are
+   listed separately and start unchecked.
+2. Press **Fetch covers** (right under the filters), then use **Cover** on any book to pick another
+   edition, upload your own image, or adjust the crop. Audiobooks often have square art: check those first.
+   The Google Books key is under "Cover search key". Nothing is redrawn here, however many covers you change.
+
+**Preview tab**
+3. All output settings are on the left. The print sheet on the right updates about half a second after
+   you stop changing things. Use the arrows for other pages and the zoom bar at the bottom to zoom. **Click a book** to open its cover dialog.
+4. Press **Create PDF**. A Save As dialog lets you pick the folder and name the file.
+5. **Export settings** saves the size, back cover, spine and sheet settings to a file; **Import settings**
+   loads one (handy for switching between book sizes or sharing). The Google key and your books are never in it.
+
+Other things to know:
+
+- **Fetch edited only** looks up covers just for books you edited.
+- **Edit** on any row changes the title, author or ISBN (CSV edits are remembered on re-import).
+- **Year** has "All years" and **Status** has "All statuses".
+- Size units are inches, millimeters or pixels (pixels at your print DPI).
+- In the Cover dialog, drag **Zoom** left to show the whole image; empty space gets the spine colour.
+- Spine text has a smallest and a largest size, and an option to wrap long titles onto two lines.
+- Back cover has three choices: same as the front, a solid colour matching the spine, or that colour with the date read and the star rating (each can be hidden).
+- Cut marks surround each wrap; shorter fold marks show where the spine meets each cover.
+
+## How covers are chosen
+
+Every result is graded by comparing its title and author with yours. The picker shows only the good
+matches; box sets, omnibuses, study guides, summaries and other titles are left out (and never
+downloaded). If a book has no good match, the picker shows the nearest results with a notice, and the
+automatic pick says it is unsure. Opening **Cover** also adds other editions of the same book from Open
+Library, and Amazon's picture for the ISBN-10 or ASIN is tried too. To see how results are graded for
+your own books: `python -m minibook check-covers --csv your_export.csv --limit 8 --more`.
+
+## Getting a Google Books API key (optional, free)
+
+Without a key Google often answers "429 Too Many Requests". That is Google's shared quota, not a
+fault in the app, and Open Library keeps working. A key gives you your own allowance. The steps
+that worked, in Google Cloud Console (console.cloud.google.com):
+
+1. Create a project (any name, for example "Minibooks").
+2. **APIs & Services > Library**, search for **Books API**, open it and press **Enable**. Do this
+   first: until it is enabled it does not appear in the key's restriction list.
+3. **APIs & Services > Credentials > Create credentials > API key**.
+4. Under **API restrictions** choose **Restrict key** and tick **Books API** only. Do not pick
+   "Google Cloud APIs" or any Cloud Storage entry: they are unrelated.
+5. Leave **Application restrictions** on **None**. "Websites" checks the web page making the request,
+   which this app does not have. "Android" and "iOS" do not apply. "IP addresses" breaks whenever
+   your home IP changes. The API restriction is your protection, so keep the key private.
+6. Create the key and paste it into **Books tab > Cover search key** in the app.
+
+The "Service account required" notice in that panel is about the Gemini and Agent Platform APIs and
+does not apply to Books.
+
+After saving the key, press **Fetch covers** (or open a book's Cover dialog). Books looked up earlier
+are searched again, so Google results appear without restarting the app. Your chosen covers, custom
+images and crops are kept. The key is stored as plain text in the app's settings file in your user
+config folder: do not share that file or the project folder with it inside. If a key leaks, delete it
+in the console and make a new one. `python -m minibook check-covers` uses the saved key too.
+
+Defaults: board 1.25" tall x 0.75" wide x 0.25" thick. Everything is editable in the Settings panel
+and saved automatically.
+
+## No GUI needed
+
+    python -m minibook build --csv your_export.csv --year 2026 --out wraps.pdf
+    python -m minibook build --csv your_export.csv --year 2026 --offline --out layout.pdf
+
+Options: `--status read,currently-reading`, `--include-undated`, `--google-key KEY`.
+
+## Tests
+
+    python -m unittest discover -s tests -t .
+
+528 tests; each names the requirement IDs it covers. Network code is tested with stand-in
+responses, and the GUI view against a stand-in for NiceGUI, so the two checks above are the real tests.
+
+## Layout
+
+    minibook_gui.py         launcher for the window
+    minibook/gui.py         NiceGUI view (thin)
+    minibook/controller.py  all GUI behavior, framework-free and tested
+    minibook/csvimport.py   StoryGraph parsing, filtering, sorting
+    minibook/covers.py      Open Library + Google Books lookup, disk cache
+    minibook/imaging.py     crop, quality check, colors
+    minibook/spine.py       spine text fitting and drawing
+    minibook/net.py         back + spine + front assembly
+    minibook/layout.py      page grid and cut marks
+    minibook/pdfexport.py   PDF output
+    minibook/preview.py     fast cached live preview of the print sheet
+    minibook/backface.py    back cover: solid colour, date, star rating
+    minibook/settings.py    saved settings and per-book choices
+    assets/fonts/           bundled DejaVu Sans Condensed (identical output on every OS)

@@ -1,0 +1,10 @@
+Pillow>=10.0
+reportlab>=4.0
+requests>=2.31
+platformdirs>=4.0
+nicegui>=3.0
+# Standalone window (otherwise it opens in your browser). On Linux pywebview also needs a
+# GTK or Qt backend: after the install below run  pip install "pywebview[qt]"  (without it the app opens in your browser).
+pywebview>=5.0
+# For running the tests only:
+pdfplumber>=0.11
