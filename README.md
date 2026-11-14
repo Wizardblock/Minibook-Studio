@@ -27,6 +27,9 @@ On Linux, pywebview needs a Qt or GTK backend for the standalone window:
 
 ## Using the app
 
+Want to try it first? `samples/sample_library.csv` is a small made-up reading list of public-domain classics. Drop
+it onto the Books tab and everything below works with it.
+
 The window has two tabs.
 
 **Books tab**
@@ -100,7 +103,7 @@ and saved automatically.
 
     python -m unittest discover -s tests -t .
 
-528 tests; each names the requirement IDs it covers. Network code is tested with stand-in
+532 tests; each names the requirement IDs it covers. Network code is tested with stand-in
 responses and the GUI view against a stand-in for NiceGUI, so a real run of the app is still the final check.
 
 ## Layout
