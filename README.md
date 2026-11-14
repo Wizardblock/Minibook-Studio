@@ -14,6 +14,9 @@ Sans Condensed font keeps its own licence (`assets/fonts/LICENSE-DejaVu.txt`).
 GUI have only been tested against a stand-in for NiceGUI, so report any rough edges. Packaged downloads for
 Windows, Mac and Linux are the next step. The command-line runner works without the GUI.
 
+**Try it first:** `samples/sample_library.csv` is a small made-up reading list of public-domain classics. Drop it
+onto the Books tab to see covers, spines, the preview and the test print without needing an export of your own.
+
 ## Setup (Windows or Linux, Python 3.12)
 
     python -m venv .venv

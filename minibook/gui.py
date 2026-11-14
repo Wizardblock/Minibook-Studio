@@ -16,7 +16,7 @@ from PIL import Image
 
 from nicegui import run, ui
 
-from . import covers, csvimport as c, imaging, layout, preview as pv, settings as S, units, workspace
+from . import about, covers, csvimport as c, imaging, layout, preview as pv, settings as S, units, workspace
 from .controller import (MAX_ZOOM, STATUS_OPTIONS, YEAR_ALL, AppController, pdf_path)
 
 APP_TITLE = "MiniBook Studio"
@@ -1012,7 +1012,10 @@ def build_page(ctl: AppController) -> None:
         with ui.tabs().props("dense indicator-color=white") as tabs:
             ui.tab("books", label="Books", icon="menu_book")
             ui.tab("preview", label="Preview", icon="grid_view")
-        ui.label("Wraps for mini books").classes("text-sm opacity-80")
+        with ui.row().classes("items-center gap-2"):
+            ui.label("Wraps for mini books").classes("text-sm opacity-80")
+            ui.button(icon="info", on_click=lambda: about_dialog.open()).props("flat round dense color=white") \
+                .tooltip("About")
 
     with ui.tab_panels(tabs, value="books", animated=False, keep_alive=True, on_change=on_tab).classes("w-full"):
         # ----- Books tab: choose and tidy the books, look up covers -----
@@ -1109,6 +1112,21 @@ def build_page(ctl: AppController) -> None:
             "max-width: none; width: min(1100px, 96vw); height: min(92vh, 900px); overflow: hidden"):
         cover_holder = ui.column().classes("w-full gap-2 no-wrap").style("height: 100%")
     cover_dialog.on_value_change(lambda e: finish_cover() if not e.value else None)
+    about_dialog = ui.dialog()
+    with about_dialog, ui.card().classes("w-[min(520px,95vw)] gap-2"):
+        ui.label(about.APP_NAME).classes("text-xl font-bold")
+        ui.label(f"Version {about.VERSION}").classes("text-sm text-gray-600")
+        ui.label(about.TAGLINE).classes("text-base")
+        ui.label(about.NOT_AFFILIATED).classes("text-sm")
+        ui.label(about.PRIVACY).classes("text-sm")
+        for what, who in about.CREDITS:
+            with ui.row().classes("gap-2 no-wrap"):
+                ui.label(what + ":").classes("text-sm font-semibold")
+                ui.label(who).classes("text-sm")
+        ui.label(f"Free software under the {about.LICENSE_NAME}.").classes("text-sm")
+        ui.link(about.REPO_URL, about.REPO_URL, new_tab=True).classes("text-sm break-all")
+        with ui.row().classes("w-full justify-end"):
+            ui.button("Close", on_click=about_dialog.close).props("color=primary")
     edit_dialog = ui.dialog()
     with edit_dialog, ui.card().classes("w-[min(520px,95vw)]"):
         edit_holder = ui.column().classes("w-full")
