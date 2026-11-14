@@ -118,7 +118,7 @@ Options: `--status read,currently-reading`, `--include-undated`, `--google-key K
 
     python -m unittest discover -s tests -t .
 
-528 tests; each names the requirement IDs it covers. Network code is tested with stand-in
+534 tests; each names the requirement IDs it covers. Network code is tested with stand-in
 responses, and the GUI view against a stand-in for NiceGUI, so the two checks above are the real tests.
 
 ## Layout
