@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.wizardblock.minibookstudio</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>MiniBook Studio</name>
+  <summary>Printable cover wraps for mini books</summary>
+  <description>
+    <p>Turn your StoryGraph or Goodreads reading list into printable wraps for mini books: back, spine and front on one sheet, with cut and fold marks, covers found automatically and a live preview. Saves PDF or SVG.</p>
+  </description>
+  <launchable type="desktop-id">io.github.wizardblock.minibookstudio.desktop</launchable>
+  <url type="homepage">https://github.com/Wizardblock/Minibook-Studio</url>
+  <url type="bugtracker">https://github.com/Wizardblock/Minibook-Studio/issues</url>
+  <developer_name>Wizardblock</developer_name>
+  <content_rating type="oars-1.1"/>
+  <categories>
+    <category>Graphics</category>
+    <category>Office</category>
+  </categories>
+  <provides>
+    <binary>minibook-studio</binary>
+  </provides>
+  <releases>
+    <release version="0.1.0" date="2026-11-14"/>
+  </releases>
+</component>

@@ -15,9 +15,20 @@ onto the Books tab to see covers, spines, the preview and the test print without
 
 ## Download
 
-Ready-made downloads for Windows, Mac (Apple Silicon) and Linux are on the project's Releases page once the first
-version is published. Each one has a **READ ME FIRST** note: the apps are not signed yet, so Windows and macOS ask
-you to confirm the first time you open one. Nothing needs installing.
+Ready-made downloads are on the project's Releases page once the first version is published. Every one opens
+MiniBook Studio as its own desktop window, never in a web browser, and none needs a terminal.
+
+| System | Download | How |
+| --- | --- | --- |
+| Windows | `MiniBook-Studio-Setup-<version>.exe` | Double-click, then Next. A portable `.zip` is also there if you prefer no install. |
+| Mac (Apple Silicon) | `MiniBook-Studio-<version>-macos-arm64.dmg` | Open it and drag the app to Applications. |
+| Linux (Debian, Ubuntu, Mint) | `minibook-studio_<version>_amd64.deb` | Double-click to install; any needed libraries come with it. |
+| Linux (other) | `MiniBook-Studio-<version>-x86_64.AppImage` | Right-click, Properties, allow running as a program, then double-click. |
+
+The apps are not signed yet, so Windows and macOS ask you to confirm the first time you open one (see the
+**READ ME FIRST** note). Windows needs Microsoft's WebView2, which is built into Windows 11 and current Windows 10;
+if it is missing the app says so and links to the free download. Wine is not supported, because it has no WebView2.
+If something goes wrong, the app shows a message and keeps a log in its cache folder.
 
 ## Run from source (Windows or Linux, Python 3.12)
 

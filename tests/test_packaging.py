@@ -117,9 +117,19 @@ class TestWorkflow(unittest.TestCase):
     def test_PKG04_every_system_is_self_tested_and_uploaded(self):
         steps = self.wf["jobs"]["build"]["steps"]
         names = [s.get("name", "") for s in steps]
-        for system in ("Windows", "Mac", "Linux"):
+        for system in ("Windows", "Mac"):
             self.assertTrue(any(n.startswith("Self-test") and system in n for n in names), system)
+        self.assertTrue(any("Install the .deb" in n for n in names))
+        self.assertTrue(any("Test the AppImage" in n for n in names))
+        self.assertTrue(any("Install and self-test the installer" in n for n in names))
         self.assertTrue(any("upload-artifact" in s.get("uses", "") for s in steps))
+
+    def test_PKG04_the_actions_are_on_node24_releases_and_appstream_is_installed(self):
+        text = (ROOT / ".github" / "workflows" / "build.yml").read_text()
+        for old in ("upload-artifact@v4", "upload-artifact@v5", "download-artifact@v4",
+                    "download-artifact@v5", "checkout@v4", "setup-python@v5"):
+            self.assertNotIn(old, text)
+        self.assertIn("apt-get install -y appstream", text)
 
     def test_PKG05_a_release_is_made_only_for_version_tags_and_has_checksums(self):
         rel = self.wf["jobs"]["release"]
@@ -143,8 +153,6 @@ class TestStage(unittest.TestCase):
         elif os_name == "macos":
             (d / "MiniBook Studio.app" / "Contents").mkdir(parents=True)
             (d / "MiniBook Studio.app" / "Contents" / "Info.plist").write_text("x")
-        else:
-            (d / "MiniBook-Studio-x86_64.AppImage").write_text("x")
         return d
 
     def stage(self, os_name):
@@ -157,10 +165,11 @@ class TestStage(unittest.TestCase):
 
     def test_PKG06_every_download_has_the_app_the_sample_the_licence_and_the_notes(self):
         for os_name, expected in (("windows", "MiniBook Studio/MiniBookStudio.exe"),
-                                  ("macos", "MiniBook Studio.app/Contents/Info.plist"),
-                                  ("linux", "MiniBook-Studio-x86_64.AppImage")):
+                                  ("macos", "MiniBook Studio.app/Contents/Info.plist")):
             folder = self.stage(os_name)
-            self.assertEqual(folder.name, f"MiniBook-Studio-{os_name}-1.2.3")
+            want = {"windows": "MiniBook-Studio-windows-portable-1.2.3",
+                    "macos": "MiniBook-Studio-macos-1.2.3"}[os_name]
+            self.assertEqual(folder.name, want)
             self.assertTrue((folder / expected).exists(), os_name)
             self.assertTrue((folder / "samples" / "sample_library.csv").exists())
             self.assertTrue((folder / "LICENSE").exists())
@@ -171,7 +180,10 @@ class TestStage(unittest.TestCase):
     def test_PKG06_the_notes_explain_the_unsigned_warning_for_each_system(self):
         self.assertIn("More info", self.stage("windows").joinpath("READ ME FIRST.txt").read_text())
         self.assertIn("Open Anyway", self.stage("macos").joinpath("READ ME FIRST.txt").read_text())
-        self.assertIn("chmod +x", self.stage("linux").joinpath("READ ME FIRST.txt").read_text())
+
+    def test_PKG06_linux_has_no_staged_folder_because_it_ships_as_deb_and_appimage(self):
+        with self.assertRaises(ValueError):
+            self.stage("linux")
 
     def test_PKG06_an_unknown_system_is_refused(self):
         import importlib.util
@@ -180,6 +192,63 @@ class TestStage(unittest.TestCase):
         spec.loader.exec_module(mod)
         with self.assertRaises(ValueError):
             mod.stage("beos", Path("."), Path(tempfile.mkdtemp()), "1")
+
+
+class TestInstallers(unittest.TestCase):
+    def test_PKG07_linux_metadata_is_valid_xml_with_matching_ids(self):
+        import xml.etree.ElementTree as ET
+        d = ROOT / "packaging" / "linux"
+        meta = next(d.glob("*.metainfo.xml"))
+        desktop = next(d.glob("*.desktop"))
+        root = ET.parse(meta).getroot()
+        app_id = root.findtext("id")
+        self.assertEqual(app_id, "io.github.wizardblock.minibookstudio")
+        self.assertEqual(meta.name, app_id + ".metainfo.xml")
+        self.assertEqual(desktop.name, app_id + ".desktop")
+        self.assertIn("Exec=", desktop.read_text())
+
+    def test_PKG07_the_deb_installs_dependencies_and_a_command_without_the_terminal(self):
+        text = (ROOT / "packaging" / "make_deb.sh").read_text()
+        for needle in ("Depends:", "/usr/bin/minibook-studio", "metainfo", ".desktop", "dpkg-deb"):
+            self.assertIn(needle, text)
+
+    def test_PKG07_the_appimage_script_takes_a_version_and_ships_metainfo(self):
+        text = (ROOT / "packaging" / "make_appimage.sh").read_text()
+        self.assertIn("VERSION", text)
+        self.assertIn("metainfo", text)
+
+    def test_PKG07_the_windows_installer_is_per_user_and_named_by_version(self):
+        text = (ROOT / "packaging" / "installer.iss").read_text()
+        self.assertIn("PrivilegesRequired=lowest", text)
+        self.assertIn("MiniBook-Studio-Setup-{#Version}", text)
+
+    def test_PKG07_release_notes_have_version_placeholders(self):
+        text = (ROOT / "packaging" / "release-notes.md").read_text()
+        self.assertIn("{version}", text)
+
+
+class TestFatal(unittest.TestCase):
+    def test_PKG08_webview2_detection_reads_the_registry_through_an_injectable_reader(self):
+        from minibook import fatal
+        self.assertTrue(fatal.webview2_installed(lambda *a: "120.0.1"))
+        self.assertFalse(fatal.webview2_installed(lambda *a: None))
+
+    def test_PKG08_logging_goes_to_a_file_in_the_cache_folder(self):
+        from minibook import fatal
+        self.assertEqual(fatal.log_path().name, "minibook.log")
+
+    def test_PKG08_selftest_window_implies_selftest(self):
+        from minibook import gui, selftest
+        orig = selftest.window_problems
+        selftest.window_problems = lambda timeout_s=40: []
+        try:
+            out = io.StringIO()
+            with redirect_stdout(out), self.assertRaises(SystemExit) as cm:
+                gui.main(["--selftest-window"])
+        finally:
+            selftest.window_problems = orig
+        self.assertEqual(cm.exception.code, 0)
+        self.assertIn("self-test passed", out.getvalue())
 
 
 if __name__ == "__main__":

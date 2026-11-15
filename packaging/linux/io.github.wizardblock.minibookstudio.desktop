@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=MiniBook Studio
+GenericName=Mini book cover wraps
+Comment=Printable cover wraps for mini books
+Exec=minibook-studio
+Icon=io.github.wizardblock.minibookstudio
+Terminal=false
+Categories=Graphics;Office;
+Keywords=books;covers;mini;print;storygraph;goodreads;
+StartupWMClass=MiniBookStudio

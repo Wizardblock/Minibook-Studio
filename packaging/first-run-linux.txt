@@ -1,9 +1,0 @@
-MiniBook Studio {version} for Linux
-
-1. Make the file runnable:   chmod +x MiniBook-Studio-x86_64.AppImage
-2. Run it:                  ./MiniBook-Studio-x86_64.AppImage
-   If your system has no FUSE, use:  ./MiniBook-Studio-x86_64.AppImage --appimage-extract-and-run
-3. To try it, drop samples/sample_library.csv onto the Books tab.
-
-If the window cannot open, the app opens in your web browser instead.
-Project page: https://github.com/Wizardblock/Minibook-Studio

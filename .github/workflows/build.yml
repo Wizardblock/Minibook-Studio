@@ -35,6 +35,9 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+      - name: Read the version
+        shell: bash
+        run: echo "VERSION=$(python -c "from minibook.about import VERSION; print(VERSION)")" >> "$GITHUB_ENV"
       - name: Install the app and PyInstaller
         run: |
           python -m pip install --upgrade pip
@@ -44,43 +47,85 @@ jobs:
         run: pip install "pywebview[qt]"
       - name: Build
         run: pyinstaller --noconfirm packaging/minibook.spec
-      - name: Wrap as an AppImage
-        if: matrix.name == 'linux'
-        run: ./packaging/make_appimage.sh
+      - name: Make the output folder
+        shell: bash
+        run: mkdir -p release
+
+      # ---------- Windows: an installer and a portable zip ----------
       - name: Self-test the build (Windows)
         if: matrix.name == 'windows'
         shell: bash
         run: |
           dist/MiniBookStudio/MiniBookStudio.exe --selftest --log selftest.log || { cat selftest.log; exit 1; }
           cat selftest.log
+      - name: Portable zip (Windows)
+        if: matrix.name == 'windows'
+        shell: pwsh
+        run: |
+          python packaging/stage.py --os windows --dist dist --out release --version $env:VERSION
+          Compress-Archive -Path "release/MiniBook-Studio-windows-portable-$env:VERSION" -DestinationPath "release/MiniBook-Studio-windows-portable-$env:VERSION.zip"
+      - name: Installer (Windows)
+        if: matrix.name == 'windows'
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          & $iscc "/DVersion=$env:VERSION" packaging\installer.iss
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Install and self-test the installer (Windows)
+        if: matrix.name == 'windows'
+        shell: pwsh
+        run: |
+          $setup = "release/MiniBook-Studio-Setup-$env:VERSION.exe"
+          Start-Process -FilePath $setup -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$PWD\installed" -Wait
+          & "$PWD\installed\MiniBookStudio.exe" --selftest --log installed-selftest.log
+          Get-Content installed-selftest.log
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      # ---------- Mac: a disk image ----------
       - name: Self-test the build (Mac)
         if: matrix.name == 'macos'
         run: '"dist/MiniBook Studio.app/Contents/MacOS/MiniBookStudio" --selftest'
-      - name: Self-test the build (Linux)
-        if: matrix.name == 'linux'
-        run: dist/MiniBook-Studio-x86_64.AppImage --appimage-extract-and-run --selftest
-      - name: Collect the download
-        shell: bash
-        run: |
-          VERSION=$(python -c "from minibook.about import VERSION; print(VERSION)")
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          python packaging/stage.py --os ${{ matrix.name }} --dist dist --out release --version "$VERSION"
-      - name: Zip (Windows)
-        if: matrix.name == 'windows'
-        shell: pwsh
-        run: Compress-Archive -Path "release/MiniBook-Studio-windows-$env:VERSION" -DestinationPath "release/MiniBook-Studio-windows-$env:VERSION.zip"
-      - name: Zip (Mac)
+      - name: Disk image (Mac)
         if: matrix.name == 'macos'
-        run: ditto -c -k --sequesterRsrc --keepParent "release/MiniBook-Studio-macos-$VERSION" "release/MiniBook-Studio-macos-$VERSION.zip"
-      - name: Pack (Linux)
+        run: |
+          python packaging/stage.py --os macos --dist dist --out release --version "$VERSION"
+          hdiutil create -volname "MiniBook Studio" -srcfolder "release/MiniBook-Studio-macos-$VERSION" -ov -format UDZO "release/MiniBook-Studio-$VERSION-macos-arm64.dmg"
+
+      # ---------- Linux: a .deb and an AppImage ----------
+      - name: Install packaging tools (Linux)
         if: matrix.name == 'linux'
-        run: tar -czf "release/MiniBook-Studio-linux-$VERSION.tar.gz" -C release "MiniBook-Studio-linux-$VERSION"
-      - uses: actions/upload-artifact@v5
+        run: sudo apt-get update && sudo apt-get install -y appstream desktop-file-utils
+      - name: Check the Linux metadata
+        if: matrix.name == 'linux'
+        run: |
+          desktop-file-validate packaging/linux/io.github.wizardblock.minibookstudio.desktop
+          appstreamcli validate --no-net packaging/linux/io.github.wizardblock.minibookstudio.metainfo.xml
+      - name: Installer package (Linux .deb)
+        if: matrix.name == 'linux'
+        run: ./packaging/make_deb.sh "$VERSION" && cp dist/*.deb release/
+      - name: Install the .deb and test it (Linux)
+        if: matrix.name == 'linux'
+        run: |
+          sudo apt-get install -y ./release/minibook-studio_${VERSION}_amd64.deb
+          minibook-studio --version
+          minibook-studio --selftest-window
+      - name: AppImage (Linux)
+        if: matrix.name == 'linux'
+        run: ./packaging/make_appimage.sh "$VERSION" && cp dist/*.AppImage release/
+      - name: Test the AppImage (Linux)
+        if: matrix.name == 'linux'
+        run: ./release/MiniBook-Studio-${VERSION}-x86_64.AppImage --appimage-extract-and-run --selftest
+
+      - uses: actions/upload-artifact@v6
         with:
           name: MiniBook-Studio-${{ matrix.name }}
           path: |
             release/*.zip
-            release/*.tar.gz
+            release/*.exe
+            release/*.dmg
+            release/*.deb
+            release/*.AppImage
           if-no-files-found: error
 
   release:
@@ -90,7 +135,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v7
         with:
           path: downloads
           merge-multiple: true
@@ -98,7 +144,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          sed "s/{version}/$VERSION/g" packaging/release-notes.md > notes.md
           cd downloads
           sha256sum * > SHA256SUMS.txt
           gh release create "${{ github.ref_name }}" --repo "${{ github.repository }}" \
-            --title "MiniBook Studio ${{ github.ref_name }}" --generate-notes *
+            --title "MiniBook Studio ${{ github.ref_name }}" --notes-file ../notes.md --generate-notes *
