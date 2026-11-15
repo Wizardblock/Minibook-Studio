@@ -22,7 +22,7 @@ MiniBook Studio as its own desktop window, never in a web browser, and none need
 | --- | --- | --- |
 | Windows | `MiniBook-Studio-Setup-<version>.exe` | Double-click, then Next. A portable `.zip` is also there if you prefer no install. |
 | Mac (Apple Silicon) | `MiniBook-Studio-<version>-macos-arm64.dmg` | Open it and drag the app to Applications. |
-| Linux (Debian, Ubuntu, Mint) | `minibook-studio_<version>_all.deb` | Double-click to install; it uses your system's Python and Qt and fetches a few libraries the first time, so it needs internet. |
+| Linux (Debian, Ubuntu, Mint) | `minibook-studio_<version>_all.deb` | Double-click to install; it uses your system's Python and fetches a few libraries the first time, so it needs internet. |
 | Linux (any other) | `MiniBook-Studio-<version>-x86_64.AppImage` | One file for any distribution. Right-click, Properties, Permissions, allow executing, then double-click. |
 
 The apps are not signed yet, so Windows and macOS ask you to confirm the first time you open one (see the

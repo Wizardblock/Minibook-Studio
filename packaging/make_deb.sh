@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds the Linux installer (a .deb that Mint, Ubuntu and Debian open with a double-click).
-# It holds the app's own files only. The system supplies Python and Qt (declared in Depends) and the install step
-# adds the few Python libraries into a private folder, so nothing is bundled that could clash with the desktop.
+# It holds the app's own files only. The system supplies Python and the usual desktop libraries (declared in Depends)
+# and the install step adds the Python libraries into a private folder, so nothing bundled can clash with the desktop.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 VERSION="${1:?usage: make_deb.sh VERSION}"
@@ -16,10 +16,10 @@ cp -r minibook "$PKG/$APP/app/minibook"
 cp minibook_gui.py "$PKG/$APP/app/"
 cp -r assets "$PKG/$APP/app/assets"
 find "$PKG/$APP" -name __pycache__ -prune -exec rm -rf {} +
-# The libraries pip installs on first install: everything in requirements.txt above the "tests only" line, minus the
-# Qt window part, which comes from the system (python3-pyqt6) so it matches the desktop's own libraries.
+# The libraries pip installs at install time: everything in requirements.txt above the "tests only" line, plus the
+# Qt window part (PyQt6 wheels carry their own Qt and use the system's glib and graphics libraries).
 sed '/tests only/,$d' requirements.txt | grep -v '^#' | grep -v '^$' > "$PKG/$APP/requirements.txt"
-echo "qtpy>=2.4" >> "$PKG/$APP/requirements.txt"
+printf 'qtpy>=2.4\nPyQt6\nPyQt6-WebEngine\n' >> "$PKG/$APP/requirements.txt"
 install -m 755 packaging/linux/minibook-studio "$PKG/usr/bin/minibook-studio"
 install -m 755 packaging/linux/postinst "$PKG/DEBIAN/postinst"
 install -m 755 packaging/linux/postrm "$PKG/DEBIAN/postrm"
@@ -38,7 +38,7 @@ Architecture: all
 Installed-Size: $SIZE
 Maintainer: Wizardblock <noreply@users.noreply.github.com>
 Homepage: https://github.com/Wizardblock/Minibook-Studio
-Depends: python3 (>= 3.10), python3-venv, python3-pyqt6, python3-pyqt6.qtwebengine, python3-pyqt6.qtwebchannel, libxcb-cursor0, libegl1, libgl1, fonts-dejavu-core
+Depends: python3 (>= 3.10), python3-venv, libglib2.0-0, libdbus-1-3, libfontconfig1, libfreetype6, libegl1, libgl1, libnss3, libnspr4, libxkbcommon0, libxkbcommon-x11-0, libxcb-cursor0, libxcb-icccm4, libxcb-image0, libxcb-keysyms1, libxcb-randr0, libxcb-render-util0, libxcb-shape0, libxcb-xfixes0, libxcb-xinerama0, libxcb-xkb1, libxcomposite1, libxdamage1, libxi6, libxrandr2, libxtst6, libasound2 | libasound2t64
 Description: Printable cover wraps for mini books
  Turn your StoryGraph or Goodreads reading list into printable wraps for
  mini books: back, spine and front on one sheet, with cut and fold marks,

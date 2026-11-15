@@ -224,7 +224,7 @@ class TestInstallers(unittest.TestCase):
 
     def test_PKG07_the_deb_uses_the_systems_python_and_qt_and_sets_up_a_private_folder(self):
         text = (ROOT / "packaging" / "make_deb.sh").read_text()
-        for needle in ("Depends:", "python3-pyqt6", "python3-pyqt6.qtwebengine", "dpkg-deb", "metainfo", "Architecture: all"):
+        for needle in ("Depends:", "python3-venv", "libxcb-cursor0", "PyQt6-WebEngine", "dpkg-deb", "metainfo", "Architecture: all"):
             self.assertIn(needle, text)
         post = (ROOT / "packaging" / "linux" / "postinst").read_text()
         self.assertIn("--system-site-packages", post)
@@ -255,7 +255,7 @@ class TestInstallers(unittest.TestCase):
             self.assertIn("nicegui", text)
             self.assertIn("pywebview", text)
             self.assertNotIn("pdfplumber", text)               # tests only
-            self.assertNotIn("PyQt6", text)                    # comes from the system
+            self.assertIn("PyQt6-WebEngine", text)
         finally:
             deb.unlink(missing_ok=True)
 
