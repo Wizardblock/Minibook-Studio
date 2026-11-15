@@ -6,10 +6,11 @@ VERSION="${1:?usage: make_appimage.sh VERSION}"
 ID=io.github.wizardblock.minibookstudio
 APPDIR=build/AppDir
 rm -rf "$APPDIR"
-mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/share/metainfo"
+mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/share/metainfo" "$APPDIR/usr/share/applications"
 cp -r dist/MiniBookStudio/. "$APPDIR/usr/bin/"
 cp assets/icon.png "$APPDIR/$ID.png"
 sed 's/^Exec=.*/Exec=MiniBookStudio/' "packaging/linux/$ID.desktop" > "$APPDIR/$ID.desktop"
+cp "$APPDIR/$ID.desktop" "$APPDIR/usr/share/applications/$ID.desktop"
 cp "packaging/linux/$ID.metainfo.xml" "$APPDIR/usr/share/metainfo/$ID.appdata.xml"
 cat > "$APPDIR/AppRun" <<'RUN'
 #!/bin/sh
