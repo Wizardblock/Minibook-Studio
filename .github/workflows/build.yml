@@ -13,8 +13,8 @@ jobs:
   test:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: pip install Pillow reportlab requests platformdirs pdfplumber pyyaml
@@ -31,8 +31,8 @@ jobs:
           - {os: ubuntu-22.04, name: linux}
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install the app and PyInstaller
@@ -75,7 +75,7 @@ jobs:
       - name: Pack (Linux)
         if: matrix.name == 'linux'
         run: tar -czf "release/MiniBook-Studio-linux-$VERSION.tar.gz" -C release "MiniBook-Studio-linux-$VERSION"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: MiniBook-Studio-${{ matrix.name }}
           path: |
@@ -90,7 +90,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           path: downloads
           merge-multiple: true
