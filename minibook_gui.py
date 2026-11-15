@@ -7,7 +7,9 @@ import multiprocessing
 import os
 import sys
 
-if getattr(sys, "frozen", False):          # a packaged app has no console: keep what it prints in a log file
+_QUIET_FLAGS = ("--selftest", "--selftest-window", "--version", "--help", "-h")
+if (getattr(sys, "frozen", False) or os.environ.get("MINIBOOK_PACKAGED") == "1") and not (set(sys.argv) & set(_QUIET_FLAGS)):
+    # a packaged app has no console: keep what it prints in a log file (the check flags still print to the terminal)
     from minibook import fatal
 
     if fatal.redirect_output_to_log() is None and sys.stdout is None:

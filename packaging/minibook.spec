@@ -15,14 +15,6 @@ for package in ("nicegui", "webview"):
     datas += d
     binaries += b
     hiddenimports += h
-if sys.platform.startswith("linux"):
-    # pywebview loads its Qt window code and qtpy dynamically, so PyInstaller cannot see them on its own
-    for package in ("qtpy", "PyQt6.QtWebEngineWidgets", "PyQt6.QtWebEngineCore", "PyQt6.QtWebChannel"):
-        d, b, h = collect_all(package)
-        datas += d
-        binaries += b
-        hiddenimports += h
-    hiddenimports += ["webview.platforms.qt", "PyQt6.QtNetwork", "PyQt6.QtPrintSupport"]
 for package in ("uvicorn", "engineio", "socketio", "fastapi", "starlette", "websockets", "h11", "multipart"):
     try:
         hiddenimports += collect_submodules(package)
@@ -39,13 +31,6 @@ else:
 
 a = Analysis([os.path.join(ROOT, "minibook_gui.py")], pathex=[ROOT], binaries=binaries, datas=datas,
              hiddenimports=hiddenimports, noarchive=False)
-if sys.platform.startswith("linux"):
-    # These were built on Ubuntu 22.04. Bundled copies shadow the newer ones on a newer desktop (Mint 22, Ubuntu 24.04),
-    # and then the system's own graphics and file-dialog modules fail to load ("undefined symbol g_task_set_static_name",
-    # "Could not initialize GLX"). Use the system's copies: every Linux desktop has them (the .deb depends on them).
-    SYSTEM_LIBS = ("libglib-2.0", "libgio-2.0", "libgobject-2.0", "libgmodule-2.0", "libgthread-2.0",
-                   "libstdc++", "libgcc_s", "libGL.", "libGLX", "libGLdispatch", "libEGL", "libdrm", "libgbm")
-    a.binaries = [b for b in a.binaries if not os.path.basename(b[0]).startswith(SYSTEM_LIBS)]
 pyz = PYZ(a.pure)
 exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="MiniBookStudio", console=False, icon=icon)
 coll = COLLECT(exe, a.binaries, a.datas, name="MiniBookStudio")

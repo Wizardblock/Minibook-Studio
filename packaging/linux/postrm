@@ -1,0 +1,7 @@
+#!/bin/sh
+# The private Python folder was made after install, so the package manager does not know it: remove it here.
+set -e
+case "$1" in
+    remove|purge) rm -rf /opt/minibook-studio/venv ;;
+esac
+exit 0

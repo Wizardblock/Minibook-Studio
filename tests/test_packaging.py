@@ -1,6 +1,7 @@
 """PKG-01..PKG-06: what we can check about the packaged downloads without building them."""
 import io
 import py_compile
+import shutil
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -96,6 +97,7 @@ class TestIconsAndRecipe(unittest.TestCase):
 
     def test_PKG02_the_launcher_supports_frozen_apps(self):
         text = (ROOT / "minibook_gui.py").read_text()
+        self.assertIn("MINIBOOK_PACKAGED", text)
         self.assertIn("freeze_support", text)
         self.assertIn("sys.stdout is None", text)
 
@@ -107,22 +109,28 @@ class TestWorkflow(unittest.TestCase):
     def setUp(self):
         self.wf = yaml.safe_load((ROOT / ".github" / "workflows" / "build.yml").read_text())
 
-    def test_PKG04_it_builds_all_three_systems_after_the_tests_pass(self):
+    def test_PKG04_windows_and_mac_are_built_and_linux_is_a_package_tested_on_two_ubuntus(self):
         build = self.wf["jobs"]["build"]
         self.assertEqual(build["needs"], "test")
         systems = {m["name"] for m in build["strategy"]["matrix"]["include"]}
-        self.assertEqual(systems, {"windows", "macos", "linux"})
+        self.assertEqual(systems, {"windows", "macos"})
         self.assertFalse(build["strategy"]["fail-fast"])             # one failing system must not hide the others
+        self.assertEqual(self.wf["jobs"]["linux"]["needs"], "test")
+        test = self.wf["jobs"]["linux-test"]
+        self.assertEqual(test["needs"], "linux")
+        self.assertEqual(set(test["strategy"]["matrix"]["os"]), {"ubuntu-22.04", "ubuntu-24.04"})
+        self.assertEqual(set(self.wf["jobs"]["release"]["needs"]), {"build", "linux-test"})
 
     def test_PKG04_every_system_is_self_tested_and_uploaded(self):
         steps = self.wf["jobs"]["build"]["steps"]
         names = [s.get("name", "") for s in steps]
         for system in ("Windows", "Mac"):
             self.assertTrue(any(n.startswith("Self-test") and system in n for n in names), system)
-        self.assertTrue(any("Install the .deb" in n for n in names))
-        self.assertTrue(any("Test the AppImage" in n for n in names))
         self.assertTrue(any("Install and self-test the installer" in n for n in names))
         self.assertTrue(any("upload-artifact" in s.get("uses", "") for s in steps))
+        linux_text = yaml.dump(self.wf["jobs"]["linux-test"])
+        for needle in ("--selftest-window", "xdotool", "apt-get install -y ./pkg/"):
+            self.assertIn(needle, linux_text)
 
     def test_PKG04_the_actions_are_on_node24_releases_and_appstream_is_installed(self):
         text = (ROOT / ".github" / "workflows" / "build.yml").read_text()
@@ -207,15 +215,42 @@ class TestInstallers(unittest.TestCase):
         self.assertEqual(desktop.name, app_id + ".desktop")
         self.assertIn("Exec=", desktop.read_text())
 
-    def test_PKG07_the_deb_installs_dependencies_and_a_command_without_the_terminal(self):
+    def test_PKG07_the_deb_uses_the_systems_python_and_qt_and_sets_up_a_private_folder(self):
         text = (ROOT / "packaging" / "make_deb.sh").read_text()
-        for needle in ("Depends:", "/usr/bin/minibook-studio", "metainfo", ".desktop", "dpkg-deb"):
+        for needle in ("Depends:", "python3-pyqt6", "python3-pyqt6.qtwebengine", "dpkg-deb", "metainfo", "Architecture: all"):
             self.assertIn(needle, text)
+        post = (ROOT / "packaging" / "linux" / "postinst").read_text()
+        self.assertIn("--system-site-packages", post)
+        self.assertIn("pip install", post)
+        self.assertIn("rm -rf", (ROOT / "packaging" / "linux" / "postrm").read_text())
+        launcher = (ROOT / "packaging" / "linux" / "minibook-studio").read_text()
+        self.assertIn("MINIBOOK_PACKAGED=1", launcher)
+        self.assertIn("venv/bin/python", launcher)
 
-    def test_PKG07_the_appimage_script_takes_a_version_and_ships_metainfo(self):
-        text = (ROOT / "packaging" / "make_appimage.sh").read_text()
-        self.assertIn("VERSION", text)
-        self.assertIn("metainfo", text)
+    @unittest.skipUnless(shutil.which("dpkg-deb") and shutil.which("bash"), "needs dpkg-deb")
+    def test_PKG07_the_deb_builds_and_holds_the_app_launcher_and_metadata(self):
+        import subprocess
+        subprocess.run(["bash", str(ROOT / "packaging" / "make_deb.sh"), "9.9.9"], cwd=ROOT, check=True,
+                       capture_output=True)
+        deb = ROOT / "dist" / "minibook-studio_9.9.9_all.deb"
+        try:
+            listing = subprocess.run(["dpkg-deb", "-c", str(deb)], check=True, capture_output=True, text=True).stdout
+            for expected in ("opt/minibook-studio/app/minibook_gui.py", "opt/minibook-studio/app/minibook/gui.py",
+                             "opt/minibook-studio/app/assets/fonts/DejaVuSansCondensed-Bold.ttf",
+                             "usr/bin/minibook-studio", "opt/minibook-studio/requirements.txt",
+                             "io.github.wizardblock.minibookstudio.desktop",
+                             "io.github.wizardblock.minibookstudio.metainfo.xml"):
+                self.assertIn(expected, listing)
+            reqs = subprocess.run(["dpkg-deb", "--fsys-tarfile", str(deb)], check=True, capture_output=True).stdout
+            import tarfile
+            with tarfile.open(fileobj=io.BytesIO(reqs)) as tar:
+                text = tar.extractfile("./opt/minibook-studio/requirements.txt").read().decode()
+            self.assertIn("nicegui", text)
+            self.assertIn("pywebview", text)
+            self.assertNotIn("pdfplumber", text)               # tests only
+            self.assertNotIn("PyQt6", text)                    # comes from the system
+        finally:
+            deb.unlink(missing_ok=True)
 
     def test_PKG07_the_windows_installer_is_per_user_and_named_by_version(self):
         text = (ROOT / "packaging" / "installer.iss").read_text()

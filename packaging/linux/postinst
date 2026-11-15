@@ -1,0 +1,17 @@
+#!/bin/sh
+# Runs after install: makes a private Python folder that can also see the system's Qt, then adds the libraries.
+set -e
+APP=/opt/minibook-studio
+if [ "$1" = "configure" ]; then
+    echo "MiniBook Studio: setting up (this downloads a few libraries, so it needs an internet connection)..."
+    rm -rf "$APP/venv"
+    python3 -m venv --system-site-packages "$APP/venv"
+    if ! "$APP/venv/bin/python" -m pip install --disable-pip-version-check --no-warn-script-location -q \
+            -r "$APP/requirements.txt"; then
+        echo "MiniBook Studio could not download its libraries. Check your internet connection, then run:" >&2
+        echo "    sudo apt-get install --reinstall minibook-studio" >&2
+        exit 1
+    fi
+    "$APP/venv/bin/python" -m compileall -q "$APP/app" >/dev/null 2>&1 || true
+fi
+exit 0

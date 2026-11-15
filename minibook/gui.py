@@ -1207,7 +1207,7 @@ def main(argv: list[str] | None = None) -> None:
 
     from . import fatal
     fatal.prepare_environment()
-    if fatal.is_frozen() and not args.browser and not fatal.check_window_support():
+    if fatal.is_packaged() and not args.browser and not fatal.check_window_support():
         raise SystemExit(1)
 
     ctl = make_controller(args.offline)
@@ -1220,7 +1220,7 @@ def main(argv: list[str] | None = None) -> None:
     global NATIVE
     native = (not args.browser) and _pywebview_available()
     NATIVE = native
-    if fatal.is_frozen() and not args.browser and not native:
+    if fatal.is_packaged() and not args.browser and not native:
         fatal.show_error("MiniBook Studio cannot open its window",
                          "The window component is missing from this download. Please report this on the project page: "
                          "https://github.com/Wizardblock/Minibook-Studio/issues\n\nLog file: " + str(fatal.log_path()))
