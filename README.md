@@ -13,7 +13,13 @@ Sans Condensed font keeps its own licence (`assets/fonts/LICENSE-DejaVu.txt`).
 **Try it first:** `samples/sample_library.csv` is a small made-up reading list of public-domain classics. Drop it
 onto the Books tab to see covers, spines, the preview and the test print without needing an export of your own.
 
-## Setup (Windows or Linux, Python 3.12)
+## Download
+
+Ready-made downloads for Windows, Mac (Apple Silicon) and Linux are on the project's Releases page once the first
+version is published. Each one has a **READ ME FIRST** note: the apps are not signed yet, so Windows and macOS ask
+you to confirm the first time you open one. Nothing needs installing.
+
+## Run from source (Windows or Linux, Python 3.12)
 
     python -m venv .venv
     # Windows:  .venv\Scripts\activate        Linux:  source .venv/bin/activate
@@ -103,7 +109,7 @@ and saved automatically.
 
     python -m unittest discover -s tests -t .
 
-538 tests; each names the requirement IDs it covers. Network code is tested with stand-in
+555 tests; each names the requirement IDs it covers. Network code is tested with stand-in
 responses, and the GUI view against a stand-in for NiceGUI, so the two checks above are the real tests.
 
 ## Layout
