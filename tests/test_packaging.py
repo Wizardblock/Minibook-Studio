@@ -238,6 +238,7 @@ class TestFatal(unittest.TestCase):
         self.assertEqual(fatal.log_path().name, "minibook.log")
 
     def test_PKG08_selftest_window_implies_selftest(self):
+        fake.install()
         from minibook import gui, selftest
         orig = selftest.window_problems
         selftest.window_problems = lambda timeout_s=40: []
