@@ -115,6 +115,22 @@ jobs:
             echo "--- app log"; find ~/.cache ~/.local -name minibook.log -exec cat {} \; 2>/dev/null
             exit 1
           }
+      - name: Open the installed app on a real screen (Linux)
+        if: matrix.name == 'linux'
+        run: |
+          sudo apt-get install -y xvfb xdotool x11-utils
+          export DISPLAY=:99
+          Xvfb :99 -screen 0 1600x1000x24 &
+          sleep 3
+          minibook-studio &
+          for i in $(seq 1 60); do
+            if xdotool search --name "MiniBook Studio" | grep -q .; then echo "window appeared after $i s"; found=1; break; fi
+            sleep 1
+          done
+          echo "--- windows on screen"; xwininfo -root -tree | head -30 || true
+          echo "--- app log"; find ~/.cache ~/.local -name minibook.log -exec cat {} \; 2>/dev/null
+          pkill -f MiniBookStudio || true
+          [ "${found:-}" = 1 ] || { echo "No MiniBook Studio window ever appeared"; exit 1; }
       - name: AppImage (Linux)
         if: matrix.name == 'linux'
         run: ./packaging/make_appimage.sh "$VERSION" && cp dist/*.AppImage release/
