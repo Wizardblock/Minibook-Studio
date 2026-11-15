@@ -26,6 +26,11 @@ def redirect_output_to_log() -> Path | None:
             path.write_text("", encoding="utf-8")
         stream = open(path, "a", encoding="utf-8", buffering=1)
         sys.stdout = sys.stderr = stream
+        try:                                   # the window runs in a second process and Chromium writes below Python:
+            os.dup2(stream.fileno(), 1)        # catch that too, or a window that fails to open leaves no trace
+            os.dup2(stream.fileno(), 2)
+        except (OSError, ValueError):
+            pass
         return path
     except OSError:
         return None
@@ -113,4 +118,9 @@ def prepare_environment() -> None:
         # The packaged app carries Qt, not GTK: say so, so pywebview does not try GTK first and report an error.
         if is_frozen():
             os.environ.setdefault("PYWEBVIEW_GUI", "qt")
+            # This app's page is plain text and pictures; software drawing avoids graphics-driver trouble that can
+            # leave the window blank or unopened on some Linux machines.
+            flags = os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "")
+            if "--disable-gpu" not in flags:
+                os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (flags + " --disable-gpu").strip()
             os.environ.setdefault("QT_API", "pyqt6")
