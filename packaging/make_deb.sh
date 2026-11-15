@@ -26,7 +26,7 @@ Architecture: amd64
 Installed-Size: $SIZE
 Maintainer: Wizardblock <noreply@users.noreply.github.com>
 Homepage: https://github.com/Wizardblock/Minibook-Studio
-Depends: libc6, libglib2.0-0, libdbus-1-3, libfontconfig1, libfreetype6, libegl1, libgl1, libnss3, libnspr4, libxkbcommon0, libxkbcommon-x11-0, libxcb-cursor0, libxcb-icccm4, libxcb-image0, libxcb-keysyms1, libxcb-randr0, libxcb-render-util0, libxcb-shape0, libxcb-xfixes0, libxcb-xinerama0, libxcb-xkb1, libxcomposite1, libxdamage1, libxi6, libxrandr2, libxtst6, libasound2 | libasound2t64
+Depends: libc6, libstdc++6, libgcc-s1, libglib2.0-0, libglx0, libgbm1, libdrm2, libdbus-1-3, libfontconfig1, libfreetype6, libegl1, libgl1, libnss3, libnspr4, libxkbcommon0, libxkbcommon-x11-0, libxcb-cursor0, libxcb-icccm4, libxcb-image0, libxcb-keysyms1, libxcb-randr0, libxcb-render-util0, libxcb-shape0, libxcb-xfixes0, libxcb-xinerama0, libxcb-xkb1, libxcomposite1, libxdamage1, libxi6, libxrandr2, libxtst6, libasound2 | libasound2t64
 Description: Printable cover wraps for mini books
  Turn your StoryGraph or Goodreads reading list into printable wraps for
  mini books: back, spine and front on one sheet, with cut and fold marks,
