@@ -42,7 +42,7 @@ made from same-size foam core boards. Every requirement has an ID. Every test in
 |---|---|---|
 | Engine: CSV, crop, spine, net, layout, PDF, settings, fold marks, zoom-out, wrapping, edits | automated tests, including measurements of the output PDF and deliberate-breakage checks | High |
 | GUI logic (`controller.py`): import, selection, covers, crop, settings, export, edits | automated tests run without a window | High |
-| GUI view (`gui.py`): our handlers and wiring | tests against a **stand-in** for NiceGUI (555 tests in all) | Medium: proves our code runs, not that NiceGUI's real API accepts it |
+| GUI view (`gui.py`): our handlers and wiring | tests against a **stand-in** for NiceGUI (565 tests in all) | Medium: proves our code runs, not that NiceGUI's real API accepts it |
 | Calls to NiceGUI | Checked by hand against the NiceGUI 3.x docs (upload events, `ui.download`, `ui.run`) | Medium |
 | Open Library | You ran `check-covers`: covers loaded | Confirmed on your machine |
 | Google Books | You saw HTTP 429 (quota). Handling is tested with stand-ins; a real key is untested | Unverified with a key |

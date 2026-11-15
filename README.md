@@ -120,7 +120,7 @@ and saved automatically.
 
     python -m unittest discover -s tests -t .
 
-555 tests; each names the requirement IDs it covers. Network code is tested with stand-in
+565 tests; each names the requirement IDs it covers. Network code is tested with stand-in
 responses, and the GUI view against a stand-in for NiceGUI, so the two checks above are the real tests.
 
 ## Layout
