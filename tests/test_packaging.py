@@ -119,7 +119,14 @@ class TestWorkflow(unittest.TestCase):
         test = self.wf["jobs"]["linux-test"]
         self.assertEqual(test["needs"], "linux")
         self.assertEqual(set(test["strategy"]["matrix"]["os"]), {"ubuntu-22.04", "ubuntu-24.04"})
-        self.assertEqual(set(self.wf["jobs"]["release"]["needs"]), {"build", "linux-test"})
+        self.assertEqual(set(self.wf["jobs"]["release"]["needs"]), {"build", "linux-test", "generic-test"})
+
+    def test_PKG04_the_generic_linux_download_is_started_in_several_distributions(self):
+        gen = self.wf["jobs"]["generic-test"]
+        images = set(gen["strategy"]["matrix"]["image"])
+        self.assertTrue({"ubuntu:24.04", "debian:12", "fedora:latest", "archlinux:latest"} <= images, images)
+        text = yaml.dump(self.wf["jobs"]["appimage"])
+        self.assertIn("libglib-2.0", text)                      # the bundle must not carry the system's own libraries
 
     def test_PKG04_every_system_is_self_tested_and_uploaded(self):
         steps = self.wf["jobs"]["build"]["steps"]
@@ -251,6 +258,18 @@ class TestInstallers(unittest.TestCase):
             self.assertNotIn("PyQt6", text)                    # comes from the system
         finally:
             deb.unlink(missing_ok=True)
+
+    def test_PKG07_the_appimage_leaves_system_libraries_to_the_system(self):
+        spec = (ROOT / "packaging" / "minibook.spec").read_text()
+        for lib in ("libglib-2.0", "libgio-2.0", "libstdc++", "libGL", "libEGL"):
+            self.assertIn(lib, spec)
+        self.assertIn("qtpy", spec)
+        script = (ROOT / "packaging" / "make_appimage.sh").read_text()
+        self.assertIn("VERSION", script)
+        self.assertIn("metainfo", script)
+        gen = (ROOT / "packaging" / "linux" / "test-generic.sh").read_text()
+        for distro_tool in ("apt-get", "dnf", "pacman"):
+            self.assertIn(distro_tool, gen)
 
     def test_PKG07_the_windows_installer_is_per_user_and_named_by_version(self):
         text = (ROOT / "packaging" / "installer.iss").read_text()
