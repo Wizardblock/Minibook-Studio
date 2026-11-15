@@ -58,27 +58,31 @@ def run() -> list[str]:
 
 
 def window_problems(timeout_s: int = 40) -> list[str]:
-    """Linux: start Qt's web engine without a screen and load a page, so a download that cannot show its window
-    is caught by the build rather than by a user (--selftest-window)."""
+    """Linux: open a real pywebview window (Qt, no screen) and load a page, so a download that cannot show its
+    window is caught by the build rather than by a user (--selftest-window)."""
     import os
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     os.environ.setdefault("QTWEBENGINE_DISABLE_SANDBOX", "1")
+    os.environ.setdefault("PYWEBVIEW_GUI", "qt")
+    os.environ.setdefault("QT_API", "pyqt6")
     try:
-        from PyQt6.QtCore import QTimer
-        from PyQt6.QtWebEngineWidgets import QWebEngineView
-        from PyQt6.QtWidgets import QApplication
+        import webview
     except Exception as e:
-        return [f"window: Qt web engine is missing: {type(e).__name__}: {e}"]
+        return [f"window: pywebview is missing: {type(e).__name__}: {e}"]
     result: list[str] = []
-    app = QApplication(["minibook-studio"])        # an empty list aborts Qt web engine
-    view = QWebEngineView()
+    window = webview.create_window("MiniBook Studio self-test", html="<html><body><p>MiniBook Studio</p></body></html>")
 
-    def loaded(ok: bool) -> None:
-        if not ok:
-            result.append("window: the web engine started but could not load a page")
-        app.quit()
-    view.loadFinished.connect(loaded)
-    QTimer.singleShot(timeout_s * 1000, lambda: (result.append("window: the web engine did not answer in time"), app.quit()))
-    view.setHtml("<html><body><p>MiniBook Studio</p></body></html>")
-    app.exec()
+    def check() -> None:
+        if not window.events.loaded.wait(timeout_s):
+            result.append("window: the window opened but its page did not load in time")
+        window.destroy()
+
+    watchdog = threading.Timer(timeout_s + 10, lambda: os._exit(1))
+    watchdog.daemon = True
+    watchdog.start()
+    try:
+        webview.start(check, gui="qt")
+    except Exception as e:
+        result.append(f"window: pywebview could not start its Qt window: {type(e).__name__}: {e}")
+    watchdog.cancel()
     return result
