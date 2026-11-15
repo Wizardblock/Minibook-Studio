@@ -55,3 +55,30 @@ def run() -> list[str]:
     check("wraps, PDF and SVG", wrap_and_pdf)
     check("workspace", sample_workspace)
     return problems
+
+
+def window_problems(timeout_s: int = 40) -> list[str]:
+    """Linux: start Qt's web engine without a screen and load a page, so a download that cannot show its window
+    is caught by the build rather than by a user (--selftest-window)."""
+    import os
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    os.environ.setdefault("QTWEBENGINE_DISABLE_SANDBOX", "1")
+    try:
+        from PyQt6.QtCore import QTimer
+        from PyQt6.QtWebEngineWidgets import QWebEngineView
+        from PyQt6.QtWidgets import QApplication
+    except Exception as e:
+        return [f"window: Qt web engine is missing: {type(e).__name__}: {e}"]
+    result: list[str] = []
+    app = QApplication(["minibook-studio"])        # an empty list aborts Qt web engine
+    view = QWebEngineView()
+
+    def loaded(ok: bool) -> None:
+        if not ok:
+            result.append("window: the web engine started but could not load a page")
+        app.quit()
+    view.loadFinished.connect(loaded)
+    QTimer.singleShot(timeout_s * 1000, lambda: (result.append("window: the web engine did not answer in time"), app.quit()))
+    view.setHtml("<html><body><p>MiniBook Studio</p></body></html>")
+    app.exec()
+    return result

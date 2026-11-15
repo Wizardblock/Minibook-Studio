@@ -1,6 +1,7 @@
-"""Put a finished build, the sample file, the licence and first-run notes into one folder, ready to zip.
+"""Put a finished build, the sample file, the licence and first-run notes into one folder, ready to zip (Windows
+portable download) or to turn into a disk image (Mac).
 
-    python packaging/stage.py --os windows|macos|linux --dist dist --out release --version 0.1.0
+    python packaging/stage.py --os windows|macos --dist dist --out release --version 0.1.0
 """
 from __future__ import annotations
 
@@ -9,8 +10,7 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-APPIMAGE = "MiniBook-Studio-x86_64.AppImage"
-TITLES = {"windows": "MiniBook-Studio-windows", "macos": "MiniBook-Studio-macos", "linux": "MiniBook-Studio-linux"}
+TITLES = {"windows": "MiniBook-Studio-windows-portable", "macos": "MiniBook-Studio-macos"}
 
 
 def stage(os_name: str, dist: Path, out: Path, version: str) -> Path:
@@ -24,12 +24,10 @@ def stage(os_name: str, dist: Path, out: Path, version: str) -> Path:
     if os_name == "windows":
         built = dist / "MiniBookStudio"
         shutil.copytree(built, folder / "MiniBook Studio")
-    elif os_name == "macos":
+    else:
         built = dist / "MiniBook Studio.app"
         shutil.copytree(built, folder / built.name, symlinks=True)
-    else:
-        built = dist / APPIMAGE
-        shutil.copy2(built, folder / APPIMAGE)
+        (folder / "Applications").symlink_to("/Applications")      # the drag-to-install target in the disk image
     shutil.copytree(ROOT / "samples", folder / "samples")
     shutil.copy2(ROOT / "LICENSE", folder / "LICENSE")
     notes = (ROOT / "packaging" / f"first-run-{os_name}.txt").read_text(encoding="utf-8")

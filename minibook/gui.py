@@ -1186,19 +1186,28 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--selftest", action="store_true", help="check this install has everything it needs, then exit")
     ap.add_argument("--version", action="store_true", help="print the version and exit")
     ap.add_argument("--log", help="with --selftest: also write the result to this file")
+    ap.add_argument("--selftest-window", action="store_true",
+                    help="Linux builds: also check Qt's web engine can show a page, with no screen needed")
     args = ap.parse_args(argv)
     if args.version:
         print(about.version_line())
         return
-    if args.selftest:
+    if args.selftest or args.selftest_window:
         from . import selftest
         problems = selftest.run()
+        if args.selftest_window:
+            problems += selftest.window_problems()
         lines = [f"PROBLEM: {p}" for p in problems] + ["self-test " + ("FAILED" if problems else "passed")]
         for line in lines:
             print(line)
         if args.log:                       # a windowed Windows build has no console to print to
             Path(args.log).write_text("\n".join(lines) + "\n", encoding="utf-8")
         raise SystemExit(1 if problems else 0)
+
+    from . import fatal
+    fatal.prepare_environment()
+    if fatal.is_frozen() and not args.browser and not fatal.check_window_support():
+        raise SystemExit(1)
 
     ctl = make_controller(args.offline)
     register_routes(ctl)
@@ -1210,6 +1219,11 @@ def main(argv: list[str] | None = None) -> None:
     global NATIVE
     native = (not args.browser) and _pywebview_available()
     NATIVE = native
+    if fatal.is_frozen() and not args.browser and not native:
+        fatal.show_error("MiniBook Studio cannot open its window",
+                         "The window component is missing from this download. Please report this on the project page: "
+                         "https://github.com/Wizardblock/Minibook-Studio/issues\n\nLog file: " + str(fatal.log_path()))
+        raise SystemExit(1)
     if not args.browser and not native:
         print("No window backend is installed, so opening in your web browser instead. "
               'For a standalone window: pip install "pywebview[qt]"')

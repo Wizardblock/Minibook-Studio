@@ -1,10 +1,11 @@
-MiniBook Studio {version} for Windows
+MiniBook Studio {version} for Windows (portable)
 
-1. Unzip this folder anywhere (it does not need installing).
-2. Double-click MiniBookStudio.exe.
-   Windows may say "Windows protected your PC" because the app is not signed yet.
-   Click "More info", then "Run anyway".
-3. To try it, drop samples\sample_library.csv onto the Books tab.
+This is the no-install version: unzip it anywhere and run MiniBookStudio.exe.
+(Prefer a normal install with a Start menu entry? Use the MiniBook-Studio-Setup file instead.)
 
-Your settings are kept in your user profile, so deleting this folder removes the app but not your choices.
+Windows may say "Windows protected your PC" because the app is not signed yet.
+Click "More info", then "Run anyway".
+
+To try it, drop samples\sample_library.csv onto the Books tab.
+
 Project page: https://github.com/Wizardblock/Minibook-Studio

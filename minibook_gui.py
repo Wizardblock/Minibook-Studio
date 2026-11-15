@@ -7,7 +7,12 @@ import multiprocessing
 import os
 import sys
 
-if sys.stdout is None:      # a windowed (no console) build has no output streams; libraries still write to them
+if getattr(sys, "frozen", False):          # a packaged app has no console: keep what it prints in a log file
+    from minibook import fatal
+
+    if fatal.redirect_output_to_log() is None and sys.stdout is None:
+        sys.stdout = sys.stderr = open(os.devnull, "w")
+elif sys.stdout is None:
     sys.stdout = sys.stderr = open(os.devnull, "w")
 
 from minibook.gui import main  # noqa: E402
