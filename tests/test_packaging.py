@@ -241,7 +241,7 @@ class TestFatal(unittest.TestCase):
         fake.install()
         from minibook import gui, selftest
         orig = selftest.window_problems
-        selftest.window_problems = lambda timeout_s=40: []
+        selftest.window_problems = lambda timeout_s=40, log=None: []
         try:
             out = io.StringIO()
             with redirect_stdout(out), self.assertRaises(SystemExit) as cm:

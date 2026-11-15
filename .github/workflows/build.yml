@@ -110,7 +110,11 @@ jobs:
         run: |
           sudo apt-get install -y ./release/minibook-studio_${VERSION}_amd64.deb
           minibook-studio --version
-          minibook-studio --selftest-window
+          minibook-studio --selftest-window --log "$RUNNER_TEMP/window.log" || {
+            echo "--- window log"; cat "$RUNNER_TEMP/window.log" 2>/dev/null
+            echo "--- app log"; find ~/.cache ~/.local -name minibook.log -exec cat {} \; 2>/dev/null
+            exit 1
+          }
       - name: AppImage (Linux)
         if: matrix.name == 'linux'
         run: ./packaging/make_appimage.sh "$VERSION" && cp dist/*.AppImage release/

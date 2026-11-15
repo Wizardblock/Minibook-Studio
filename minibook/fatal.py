@@ -110,3 +110,7 @@ def prepare_environment() -> None:
         # Qt's web engine refuses to start when the system forbids its sandbox (Ubuntu 24.04 and newer, many
         # containers). The window only ever shows this app's own page on this computer, so run without it.
         os.environ.setdefault("QTWEBENGINE_DISABLE_SANDBOX", "1")
+        # The packaged app carries Qt, not GTK: say so, so pywebview does not try GTK first and report an error.
+        if is_frozen():
+            os.environ.setdefault("PYWEBVIEW_GUI", "qt")
+            os.environ.setdefault("QT_API", "pyqt6")

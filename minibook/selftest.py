@@ -57,28 +57,48 @@ def run() -> list[str]:
     return problems
 
 
-def window_problems(timeout_s: int = 40) -> list[str]:
-    """Linux: start Qt's web engine without a screen and load a page, so a download that cannot show its window
-    is caught by the build rather than by a user (--selftest-window)."""
+def window_problems(timeout_s: int = 40, log: str | None = None) -> list[str]:
+    """Linux: open a real pywebview window (Qt, no screen) and load a page, so a download that cannot show its
+    window is caught by the build rather than by a user (--selftest-window)."""
     import os
+    import threading
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     os.environ.setdefault("QTWEBENGINE_DISABLE_SANDBOX", "1")
+    os.environ.setdefault("PYWEBVIEW_GUI", "qt")
+    os.environ.setdefault("QT_API", "pyqt6")
     try:
-        from PyQt6.QtCore import QTimer
-        from PyQt6.QtWebEngineWidgets import QWebEngineView
-        from PyQt6.QtWidgets import QApplication
+        import webview
     except Exception as e:
-        return [f"window: Qt web engine is missing: {type(e).__name__}: {e}"]
+        return [f"window: pywebview is missing: {type(e).__name__}: {e}"]
     result: list[str] = []
-    app = QApplication(["minibook-studio"])        # an empty list aborts Qt web engine
-    view = QWebEngineView()
 
-    def loaded(ok: bool) -> None:
-        if not ok:
-            result.append("window: the web engine started but could not load a page")
-        app.quit()
-    view.loadFinished.connect(loaded)
-    QTimer.singleShot(timeout_s * 1000, lambda: (result.append("window: the web engine did not answer in time"), app.quit()))
-    view.setHtml("<html><body><p>MiniBook Studio</p></body></html>")
-    app.exec()
+    def note(text: str) -> None:               # progress goes to the log file too: a crash leaves no other trace
+        if log:
+            with open(log, "a", encoding="utf-8") as f:
+                f.write(text + "\n")
+    if log:
+        import faulthandler
+        faulthandler.enable(open(log, "a", encoding="utf-8"), all_threads=True)
+    note(f"window: pywebview {getattr(webview, '__version__', '?')}, gui={os.environ.get('PYWEBVIEW_GUI')}")
+    window = webview.create_window("MiniBook Studio self-test", html="<html><body><p>MiniBook Studio</p></body></html>")
+
+    def check() -> None:
+        note("window: opened, waiting for the page")
+        if not window.events.loaded.wait(timeout_s):
+            result.append("window: the window opened but its page did not load in time")
+        window.destroy()
+
+    def give_up() -> None:
+        note("window: gave up waiting (the window never started or never answered)")
+        os._exit(1)
+    watchdog = threading.Timer(timeout_s + 10, give_up)
+    watchdog.daemon = True
+    watchdog.start()
+    try:
+        webview.start(check, gui="qt")
+    except Exception as e:
+        import traceback
+        note(traceback.format_exc())
+        result.append(f"window: pywebview could not start its Qt window: {type(e).__name__}: {e}")
+    watchdog.cancel()
     return result

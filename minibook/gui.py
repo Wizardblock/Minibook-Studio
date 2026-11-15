@@ -1196,12 +1196,13 @@ def main(argv: list[str] | None = None) -> None:
         from . import selftest
         problems = selftest.run()
         if args.selftest_window:
-            problems += selftest.window_problems()
+            problems += selftest.window_problems(log=args.log)
         lines = [f"PROBLEM: {p}" for p in problems] + ["self-test " + ("FAILED" if problems else "passed")]
         for line in lines:
             print(line)
         if args.log:                       # a windowed Windows build has no console to print to
-            Path(args.log).write_text("\n".join(lines) + "\n", encoding="utf-8")
+            with open(args.log, "a", encoding="utf-8") as f:       # append: the window check writes notes here too
+                f.write("\n".join(lines) + "\n")
         raise SystemExit(1 if problems else 0)
 
     from . import fatal

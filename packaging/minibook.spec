@@ -15,6 +15,14 @@ for package in ("nicegui", "webview"):
     datas += d
     binaries += b
     hiddenimports += h
+if sys.platform.startswith("linux"):
+    # pywebview loads its Qt window code and qtpy dynamically, so PyInstaller cannot see them on its own
+    for package in ("qtpy", "PyQt6.QtWebEngineWidgets", "PyQt6.QtWebEngineCore", "PyQt6.QtWebChannel"):
+        d, b, h = collect_all(package)
+        datas += d
+        binaries += b
+        hiddenimports += h
+    hiddenimports += ["webview.platforms.qt", "PyQt6.QtNetwork", "PyQt6.QtPrintSupport"]
 for package in ("uvicorn", "engineio", "socketio", "fastapi", "starlette", "websockets", "h11", "multipart"):
     try:
         hiddenimports += collect_submodules(package)
