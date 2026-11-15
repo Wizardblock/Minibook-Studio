@@ -78,9 +78,10 @@ jobs:
         run: |
           $setup = "release/MiniBook-Studio-Setup-$env:VERSION.exe"
           Start-Process -FilePath $setup -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$PWD\installed" -Wait
-          & "$PWD\installed\MiniBookStudio.exe" --selftest --log installed-selftest.log
-          Get-Content installed-selftest.log
-          if ($LASTEXITCODE -ne 0) { exit 1 }
+          Get-ChildItem "$PWD\installed" | Select-Object -First 20 | Out-Host
+          $p = Start-Process -FilePath "$PWD\installed\MiniBookStudio.exe" -ArgumentList "--selftest","--log","$PWD\installed-selftest.log" -Wait -PassThru
+          if (Test-Path installed-selftest.log) { Get-Content installed-selftest.log }
+          if ($p.ExitCode -ne 0) { exit 1 }
 
       # ---------- Mac: a disk image ----------
       - name: Self-test the build (Mac)

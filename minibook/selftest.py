@@ -70,7 +70,7 @@ def window_problems(timeout_s: int = 40) -> list[str]:
     except Exception as e:
         return [f"window: Qt web engine is missing: {type(e).__name__}: {e}"]
     result: list[str] = []
-    app = QApplication([])
+    app = QApplication(["minibook-studio"])        # an empty list aborts Qt web engine
     view = QWebEngineView()
 
     def loaded(ok: bool) -> None:
