@@ -11,15 +11,15 @@ case "$ID ${ID_LIKE:-}" in
   *debian*|*ubuntu*)
     export DEBIAN_FRONTEND=noninteractive
     apt-get update -qq >/dev/null
-    apt-get install -y -qq xvfb xdotool x11-utils libgl1-mesa-dri libglx-mesa0 libegl1 gvfs procps ca-certificates fonts-dejavu-core \
-      libnss3 libnspr4 libxcomposite1 libxdamage1 libxrandr2 libxtst6 libxi6 libxkbcommon0 libfontconfig1 libdbus-1-3 >/dev/null
+    apt-get install -y -qq xvfb xdotool libgl1-mesa-dri libglx-mesa0 libegl1 gvfs procps ca-certificates fonts-dejavu-core \
+      libnss3 libnspr4 libxcomposite1 libxdamage1 libxrandr2 libxtst6 libxi6 libxkbcommon0 libfontconfig1 libdbus-1-3 >/dev/null || exit 3
     apt-get install -y -qq libasound2t64 >/dev/null 2>&1 || apt-get install -y -qq libasound2 >/dev/null ;;
   *fedora*)
-    dnf install -y -q xorg-x11-server-Xvfb xdotool xorg-x11-utils mesa-dri-drivers mesa-libGL mesa-libEGL gvfs procps-ng dejavu-sans-fonts \
-      nss alsa-lib libXcomposite libXdamage libXrandr libXtst libXi libxkbcommon fontconfig dbus-libs >/dev/null ;;
+    dnf install -y -q xorg-x11-server-Xvfb xdotool mesa-dri-drivers mesa-libGL mesa-libEGL gvfs procps-ng dejavu-sans-fonts \
+      nss alsa-lib libXcomposite libXdamage libXrandr libXtst libXi libxkbcommon fontconfig dbus-libs >/dev/null || exit 3 ;;
   *arch*)
-    pacman -Sy --noconfirm --quiet xorg-server-xvfb xdotool xorg-xwininfo mesa libglvnd gvfs procps-ng ttf-dejavu \
-      nss alsa-lib libxcomposite libxdamage libxrandr libxtst libxi libxkbcommon fontconfig dbus >/dev/null ;;
+    pacman -Syu --noconfirm --quiet xorg-server-xvfb xdotool mesa libglvnd gvfs procps-ng ttf-dejavu \
+      nss alsa-lib libxcomposite libxdamage libxrandr libxtst libxi libxkbcommon fontconfig dbus >/dev/null || exit 3 ;;
   *) echo "unknown distribution $ID"; exit 2 ;;
 esac
 export DISPLAY=:99
