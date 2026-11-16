@@ -129,4 +129,3 @@ def prepare_environment() -> None:
             if "--disable-gpu" not in flags:
                 os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (flags + " --disable-gpu").strip()
             os.environ.setdefault("QT_API", "pyqt6")
-            os.environ.setdefault("QT_XCB_GL_INTEGRATION", "none")      # never try GLX: the page is drawn in software

@@ -112,7 +112,7 @@ jobs:
         run: |
           # Qt needs these to open a window; most desktops lack libxcb-cursor0, so they travel inside the download
           sudo apt-get update
-          sudo apt-get install -y libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 \
+          sudo apt-get install -y appstream libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 \
             libxcb-shape0 libxcb-xkb1 libxcb-xinerama0 libxcb-randr0 libxcb-xfixes0 libxkbcommon-x11-0
       - name: Install the app, PyInstaller and the Qt window backend
         run: |
@@ -177,7 +177,7 @@ jobs:
         run: ./packaging/make_deb.sh "$VERSION"
       - uses: actions/upload-artifact@v6
         with:
-          name: MiniBook-Studio-linux
+          name: MiniBook-Studio-linux-deb
           path: dist/*.deb
           if-no-files-found: error
 
@@ -191,7 +191,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v7
         with:
-          name: MiniBook-Studio-linux
+          name: MiniBook-Studio-linux-deb
           path: pkg
       - name: Install the .deb the way a user does
         run: |
@@ -223,6 +223,9 @@ jobs:
           echo "--- app log"; cat ~/.cache/MiniBookStudio/minibook.log 2>/dev/null || true
           pkill -f minibook_gui || true
           [ "${found:-}" = 1 ] || { echo "No MiniBook Studio window ever appeared"; exit 1; }
+          if grep -qE "undefined symbol|neither GLX nor EGL|Failed to create (RHI|QRhi|context)|no QRhi|cannot open shared object" ~/.cache/MiniBookStudio/minibook.log; then
+            echo "the app log shows the window could not draw"; exit 1
+          fi
       - name: Remove it again
         run: sudo apt-get remove -y minibook-studio && test ! -e /opt/minibook-studio/venv
 
