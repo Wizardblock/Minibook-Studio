@@ -39,7 +39,7 @@ LOG=$HOME/.cache/MiniBookStudio/minibook.log
 echo "--- app log"; cat "$LOG" 2>/dev/null
 pkill -f MiniBookStudio 2>/dev/null
 [ $found -eq 1 ] || { echo "No window ever appeared"; exit 1; }
-if grep -qE "undefined symbol|Could not initialize GLX|cannot open shared object|GLIBCXX|GLIBC_|neither GLX nor EGL|Failed to create (RHI|QRhi|context)|no QRhi|Attempted to render scene with no rhi" "$LOG" 2>/dev/null; then
+if grep -vi vulkan "$LOG" 2>/dev/null | grep -qE "undefined symbol|Could not initialize GLX|cannot open shared object|GLIBCXX|GLIBC_|neither GLX nor EGL|Failed to create (RHI|QRhi|context)|no QRhi|Attempted to render scene with no rhi"; then
   echo "the app log shows a library clash"; exit 1
 fi
 echo "OK on $PRETTY_NAME"

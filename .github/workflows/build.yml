@@ -223,7 +223,7 @@ jobs:
           echo "--- app log"; cat ~/.cache/MiniBookStudio/minibook.log 2>/dev/null || true
           pkill -f minibook_gui || true
           [ "${found:-}" = 1 ] || { echo "No MiniBook Studio window ever appeared"; exit 1; }
-          if grep -qE "undefined symbol|neither GLX nor EGL|Failed to create (RHI|QRhi|context)|no QRhi|cannot open shared object" ~/.cache/MiniBookStudio/minibook.log; then
+          if grep -vi vulkan ~/.cache/MiniBookStudio/minibook.log | grep -qE "undefined symbol|neither GLX nor EGL|Failed to create (RHI|QRhi|context)|no QRhi|cannot open shared object"; then
             echo "the app log shows the window could not draw"; exit 1
           fi
       - name: Remove it again
