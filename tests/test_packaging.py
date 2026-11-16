@@ -128,6 +128,9 @@ class TestWorkflow(unittest.TestCase):
         text = yaml.dump(self.wf["jobs"]["appimage"])
         self.assertIn("libglib-2.0", text)                      # the bundle must not carry the system's own libraries
         self.assertIn("libxcb-cursor", text)                    # ...but must carry the X helpers most desktops lack
+        self.assertIn("appstream", text)                        # appimagetool validates the metadata with it
+        gen = (ROOT / "packaging" / "linux" / "test-generic.sh").read_text()
+        self.assertIn("neither GLX nor EGL", gen)               # a window that cannot draw must fail the test
 
     def test_PKG04_every_system_is_self_tested_and_uploaded(self):
         steps = self.wf["jobs"]["build"]["steps"]
@@ -136,9 +139,9 @@ class TestWorkflow(unittest.TestCase):
             self.assertTrue(any(n.startswith("Self-test") and system in n for n in names), system)
         self.assertTrue(any("Install and self-test the installer" in n for n in names))
         self.assertTrue(any("upload-artifact" in s.get("uses", "") for s in steps))
-        linux_text = yaml.dump(self.wf["jobs"]["linux-test"])
-        for needle in ("--selftest-window", "xdotool", "apt-get install -y ./pkg/"):
-            self.assertIn(needle, linux_text)
+        raw = (ROOT / ".github" / "workflows" / "build.yml").read_text()
+        for needle in ("--selftest-window", "xdotool", "apt-get install -y ./pkg/", "neither GLX nor EGL"):
+            self.assertIn(needle, raw)
 
     def test_PKG04_the_actions_are_on_node24_releases_and_appstream_is_installed(self):
         text = (ROOT / ".github" / "workflows" / "build.yml").read_text()
@@ -291,6 +294,19 @@ class TestFatal(unittest.TestCase):
     def test_PKG08_logging_goes_to_a_file_in_the_cache_folder(self):
         from minibook import fatal
         self.assertEqual(fatal.log_path().name, "minibook.log")
+
+    def test_PKG08_qt_is_never_told_to_skip_opengl_because_the_web_engine_needs_a_context(self):
+        import os
+        from minibook import fatal
+        for key in ("QT_XCB_GL_INTEGRATION", "MINIBOOK_PACKAGED", "PYWEBVIEW_GUI", "QT_API", "QTWEBENGINE_CHROMIUM_FLAGS"):
+            os.environ.pop(key, None)
+        os.environ["MINIBOOK_PACKAGED"] = "1"
+        try:
+            fatal.prepare_environment()
+            self.assertNotIn("QT_XCB_GL_INTEGRATION", os.environ)
+        finally:
+            for key in ("MINIBOOK_PACKAGED", "PYWEBVIEW_GUI", "QT_API", "QTWEBENGINE_CHROMIUM_FLAGS", "QTWEBENGINE_DISABLE_SANDBOX"):
+                os.environ.pop(key, None)
 
     def test_PKG08_selftest_window_implies_selftest(self):
         fake.install()
