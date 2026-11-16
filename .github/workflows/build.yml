@@ -108,6 +108,12 @@ jobs:
           python-version: "3.12"
       - name: Read the version
         run: echo "VERSION=$(python -c "from minibook.about import VERSION; print(VERSION)")" >> "$GITHUB_ENV"
+      - name: Install the X helper libraries the bundle must carry
+        run: |
+          # Qt needs these to open a window; most desktops lack libxcb-cursor0, so they travel inside the download
+          sudo apt-get update
+          sudo apt-get install -y libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 \
+            libxcb-shape0 libxcb-xkb1 libxcb-xinerama0 libxcb-randr0 libxcb-xfixes0 libxkbcommon-x11-0
       - name: Install the app, PyInstaller and the Qt window backend
         run: |
           python -m pip install --upgrade pip
@@ -120,6 +126,10 @@ jobs:
           if find dist/MiniBookStudio -name 'libglib-2.0*' -o -name 'libgio-2.0*' -o -name 'libstdc++*' -o -name 'libGLX*' -o -name 'libEGL*' | grep .; then
             echo "the bundle carries system libraries that clash on other distributions"; exit 1
           fi
+      - name: Check the X helper libraries are inside the bundle
+        run: |
+          find dist/MiniBookStudio -name 'libxcb-cursor*' | grep .
+          find dist/MiniBookStudio -name 'libxkbcommon-x11*' | grep .
       - name: AppImage (any Linux)
         run: ./packaging/make_appimage.sh "$VERSION"
       - uses: actions/upload-artifact@v6

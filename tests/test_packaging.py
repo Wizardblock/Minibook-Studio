@@ -127,6 +127,7 @@ class TestWorkflow(unittest.TestCase):
         self.assertTrue({"ubuntu:24.04", "debian:12", "fedora:latest", "archlinux:latest"} <= images, images)
         text = yaml.dump(self.wf["jobs"]["appimage"])
         self.assertIn("libglib-2.0", text)                      # the bundle must not carry the system's own libraries
+        self.assertIn("libxcb-cursor", text)                    # ...but must carry the X helpers most desktops lack
 
     def test_PKG04_every_system_is_self_tested_and_uploaded(self):
         steps = self.wf["jobs"]["build"]["steps"]
