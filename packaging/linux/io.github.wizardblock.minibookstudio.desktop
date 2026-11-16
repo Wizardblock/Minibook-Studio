@@ -8,4 +8,4 @@ Icon=io.github.wizardblock.minibookstudio
 Terminal=false
 Categories=Graphics;Office;
 Keywords=books;covers;mini;print;storygraph;goodreads;
-StartupWMClass=MiniBookStudio
+StartupWMClass=minibook-studio

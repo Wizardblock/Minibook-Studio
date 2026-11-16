@@ -106,17 +106,38 @@ class TestPage(GuiBase):
     def test_main_uses_a_native_window_when_pywebview_is_present(self):
         import sys, types
         sys.modules["webview"] = types.ModuleType("webview")
-        sys.modules["qtpy"] = types.ModuleType("qtpy")      # stands in for the Linux window backend
+        fakes = {"qtpy": types.ModuleType("qtpy"), "PyQt6": types.ModuleType("PyQt6"),        # stand in for the
+                 "PyQt6.QtGui": types.ModuleType("PyQt6.QtGui"),                                  # Linux window backend
+                 "PyQt6.QtWebEngineWidgets": types.ModuleType("PyQt6.QtWebEngineWidgets")}
+        fakes["PyQt6"].QtGui = fakes["PyQt6.QtGui"]
+        fakes["PyQt6"].QtWebEngineWidgets = fakes["PyQt6.QtWebEngineWidgets"]
+        sys.modules.update(fakes)
         try:
             self.gui.main([])
         finally:
             sys.modules.pop("webview", None)
-            sys.modules.pop("qtpy", None)
+            for name in fakes:
+                sys.modules.pop(name, None)
         kw = self.ui.run_kwargs
         self.assertTrue(kw["native"])
         self.assertFalse(kw["show"])
         self.assertEqual(kw["window_size"], (1360, 900))
         self.assertNotIn("port", kw)
+
+    def test_a_window_backend_that_cannot_load_its_libraries_is_reported_in_words(self):
+        import sys, types
+        if not sys.platform.startswith("linux"):
+            self.skipTest("Linux window backend")
+        sys.modules["webview"] = types.ModuleType("webview")
+        sys.modules["qtpy"] = types.ModuleType("qtpy")
+        sys.modules["PyQt6"] = None                          # import fails like a missing libGL would
+        sys.modules["gi"] = None
+        try:
+            self.assertFalse(self.gui._pywebview_available())
+            self.assertIn("PyQt6", self.gui.WINDOW_PROBLEM)
+        finally:
+            for name in ("webview", "qtpy", "PyQt6", "gi"):
+                sys.modules.pop(name, None)
 
     def test_main_falls_back_to_the_browser_when_pywebview_has_no_window_backend(self):
         import sys, types

@@ -1140,11 +1140,29 @@ def make_controller(offline: bool = False) -> AppController:
     return AppController(settings, prefs, svc)      # the controller hands the saved Google key to the service
 
 
+WINDOW_PROBLEM = ""          # why the window could not be set up, in words a person can act on
+
+
 def _pywebview_available() -> bool:
-    """True only if a window can really open. On Linux pywebview also needs a Qt or GTK backend;
-    having `webview` alone makes the window crash on start."""
+    """True only if a window can really open. On Linux pywebview also needs a Qt or GTK backend, and Qt's own
+    libraries must load (a missing system library otherwise fails silently inside the window process)."""
+    global WINDOW_PROBLEM
     try:
         import webview  # noqa: F401
+    except Exception as e:
+        WINDOW_PROBLEM = f"pywebview: {type(e).__name__}: {e}"
+        return False
+    if not sys.platform.startswith("linux"):
+        return True
+    try:
+        import qtpy  # noqa: F401
+        from PyQt6 import QtGui, QtWebEngineWidgets  # noqa: F401
+        return True
+    except Exception as e:
+        WINDOW_PROBLEM = f"{type(e).__name__}: {e}"
+    try:
+        import gi  # noqa: F401
+        return True
     except Exception:
         return False
     if not sys.platform.startswith("linux"):
@@ -1207,7 +1225,7 @@ def main(argv: list[str] | None = None) -> None:
 
     from . import fatal
     fatal.prepare_environment()
-    if fatal.is_frozen() and not args.browser and not fatal.check_window_support():
+    if fatal.is_packaged() and not args.browser and not fatal.check_window_support():
         raise SystemExit(1)
 
     ctl = make_controller(args.offline)
@@ -1220,9 +1238,11 @@ def main(argv: list[str] | None = None) -> None:
     global NATIVE
     native = (not args.browser) and _pywebview_available()
     NATIVE = native
-    if fatal.is_frozen() and not args.browser and not native:
+    if fatal.is_packaged() and not args.browser and not native:
         fatal.show_error("MiniBook Studio cannot open its window",
-                         "The window component is missing from this download. Please report this on the project page: "
+                         "The window component could not start." + (f"\n\n{WINDOW_PROBLEM}" if WINDOW_PROBLEM else "") +
+                         "\n\nIf a system library is named above, install it with your package manager (for example "
+                         "the OpenGL package, such as mesa or libgl1). Otherwise please report this at "
                          "https://github.com/Wizardblock/Minibook-Studio/issues\n\nLog file: " + str(fatal.log_path()))
         raise SystemExit(1)
     if not args.browser and not native:

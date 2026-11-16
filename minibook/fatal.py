@@ -105,6 +105,11 @@ def check_window_support() -> bool:
     return False
 
 
+def is_packaged() -> bool:
+    """True for a download (a PyInstaller build, or the Linux .deb whose launcher sets MINIBOOK_PACKAGED)."""
+    return is_frozen() or os.environ.get("MINIBOOK_PACKAGED") == "1"
+
+
 def is_frozen() -> bool:
     return bool(getattr(sys, "frozen", False))
 
@@ -116,7 +121,7 @@ def prepare_environment() -> None:
         # containers). The window only ever shows this app's own page on this computer, so run without it.
         os.environ.setdefault("QTWEBENGINE_DISABLE_SANDBOX", "1")
         # The packaged app carries Qt, not GTK: say so, so pywebview does not try GTK first and report an error.
-        if is_frozen():
+        if is_packaged():
             os.environ.setdefault("PYWEBVIEW_GUI", "qt")
             # This app's page is plain text and pictures; software drawing avoids graphics-driver trouble that can
             # leave the window blank or unopened on some Linux machines.
@@ -124,3 +129,4 @@ def prepare_environment() -> None:
             if "--disable-gpu" not in flags:
                 os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (flags + " --disable-gpu").strip()
             os.environ.setdefault("QT_API", "pyqt6")
+            os.environ.setdefault("QT_XCB_GL_INTEGRATION", "none")      # never try GLX: the page is drawn in software

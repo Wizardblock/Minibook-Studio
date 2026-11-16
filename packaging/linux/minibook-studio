@@ -1,0 +1,5 @@
+#!/bin/sh
+# Starts MiniBook Studio in its own window. Output and any errors go to ~/.cache/MiniBookStudio/minibook.log.
+APP=/opt/minibook-studio
+export MINIBOOK_PACKAGED=1
+exec "$APP/venv/bin/python" "$APP/app/minibook_gui.py" "$@"

@@ -28,7 +28,6 @@ jobs:
         include:
           - {os: windows-latest, name: windows}
           - {os: macos-latest, name: macos}
-          - {os: ubuntu-22.04, name: linux}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
@@ -42,9 +41,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt pyinstaller
-      - name: Install the Linux window backend
-        if: matrix.name == 'linux'
-        run: pip install "pywebview[qt]"
       - name: Build
         run: pyinstaller --noconfirm packaging/minibook.spec
       - name: Make the output folder
@@ -93,30 +89,126 @@ jobs:
           python packaging/stage.py --os macos --dist dist --out release --version "$VERSION"
           hdiutil create -volname "MiniBook Studio" -srcfolder "release/MiniBook-Studio-macos-$VERSION" -ov -format UDZO "release/MiniBook-Studio-$VERSION-macos-arm64.dmg"
 
-      # ---------- Linux: a .deb and an AppImage ----------
-      - name: Install packaging tools (Linux)
-        if: matrix.name == 'linux'
+      - uses: actions/upload-artifact@v6
+        with:
+          name: MiniBook-Studio-${{ matrix.name }}
+          path: |
+            release/*.zip
+            release/*.exe
+            release/*.dmg
+          if-no-files-found: error
+
+  appimage:
+    needs: test
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Read the version
+        run: echo "VERSION=$(python -c "from minibook.about import VERSION; print(VERSION)")" >> "$GITHUB_ENV"
+      - name: Install the X helper libraries the bundle must carry
+        run: |
+          # Qt needs these to open a window; most desktops lack libxcb-cursor0, so they travel inside the download
+          sudo apt-get update
+          sudo apt-get install -y libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 \
+            libxcb-shape0 libxcb-xkb1 libxcb-xinerama0 libxcb-randr0 libxcb-xfixes0 libxkbcommon-x11-0
+      - name: Install the app, PyInstaller and the Qt window backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller "pywebview[qt]"
+      - name: Build
+        run: pyinstaller --noconfirm packaging/minibook.spec
+      - name: Check what the bundle carries of the system's own libraries
+        run: |
+          # these must come from the user's system, never from this download
+          if find dist/MiniBookStudio -name 'libglib-2.0*' -o -name 'libgio-2.0*' -o -name 'libstdc++*' -o -name 'libGLX*' -o -name 'libEGL*' | grep .; then
+            echo "the bundle carries system libraries that clash on other distributions"; exit 1
+          fi
+      - name: Check the X helper libraries are inside the bundle
+        run: |
+          find dist/MiniBookStudio -name 'libxcb-cursor*' | grep .
+          find dist/MiniBookStudio -name 'libxkbcommon-x11*' | grep .
+      - name: AppImage (any Linux)
+        run: ./packaging/make_appimage.sh "$VERSION"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: MiniBook-Studio-linux-appimage
+          path: dist/*.AppImage
+          if-no-files-found: error
+
+  generic-test:
+    needs: appimage
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ["ubuntu:22.04", "ubuntu:24.04", "debian:12", "fedora:latest", "archlinux:latest"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v7
+        with:
+          name: MiniBook-Studio-linux-appimage
+          path: pkg
+      - name: Start it in a plain ${{ matrix.image }}
+        run: |
+          chmod +x pkg/*.AppImage
+          docker run --rm -v "$PWD/pkg:/pkg:ro" -v "$PWD/packaging/linux:/t:ro" ${{ matrix.image }} \
+            sh -c 'cp /pkg/*.AppImage /tmp/app.AppImage && /t/test-generic.sh /tmp/app.AppImage'
+
+  linux:
+    needs: test
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Read the version
+        run: echo "VERSION=$(python -c "from minibook.about import VERSION; print(VERSION)")" >> "$GITHUB_ENV"
+      - name: Install packaging tools
         run: sudo apt-get update && sudo apt-get install -y appstream desktop-file-utils
       - name: Check the Linux metadata
-        if: matrix.name == 'linux'
         run: |
           desktop-file-validate packaging/linux/io.github.wizardblock.minibookstudio.desktop
           appstreamcli validate --no-net packaging/linux/io.github.wizardblock.minibookstudio.metainfo.xml
       - name: Installer package (Linux .deb)
-        if: matrix.name == 'linux'
-        run: ./packaging/make_deb.sh "$VERSION" && cp dist/*.deb release/
-      - name: Install the .deb and test it (Linux)
-        if: matrix.name == 'linux'
+        run: ./packaging/make_deb.sh "$VERSION"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: MiniBook-Studio-linux
+          path: dist/*.deb
+          if-no-files-found: error
+
+  linux-test:
+    needs: linux
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: MiniBook-Studio-linux
+          path: pkg
+      - name: Install the .deb the way a user does
         run: |
-          sudo apt-get install -y ./release/minibook-studio_${VERSION}_amd64.deb
+          # the runner's own tool Python is on PATH; a user's desktop uses the system Python
+          export PATH=/usr/bin:/bin:/usr/sbin:/sbin
+          sudo apt-get update
+          sudo apt-get install -y ./pkg/*.deb
+          python3 --version
+      - name: Test the installed app
+        run: |
           minibook-studio --version
+          minibook-studio --selftest || exit 1
           minibook-studio --selftest-window --log "$RUNNER_TEMP/window.log" || {
             echo "--- window log"; cat "$RUNNER_TEMP/window.log" 2>/dev/null
-            echo "--- app log"; find ~/.cache ~/.local -name minibook.log -exec cat {} \; 2>/dev/null
             exit 1
           }
-      - name: Open the installed app on a real screen (Linux)
-        if: matrix.name == 'linux'
+      - name: Open the installed app on a real screen
         run: |
           sudo apt-get install -y xvfb xdotool x11-utils
           export DISPLAY=:99
@@ -128,30 +220,15 @@ jobs:
             sleep 1
           done
           echo "--- windows on screen"; xwininfo -root -tree | head -30 || true
-          echo "--- app log"; find ~/.cache ~/.local -name minibook.log -exec cat {} \; 2>/dev/null
-          pkill -f MiniBookStudio || true
+          echo "--- app log"; cat ~/.cache/MiniBookStudio/minibook.log 2>/dev/null || true
+          pkill -f minibook_gui || true
           [ "${found:-}" = 1 ] || { echo "No MiniBook Studio window ever appeared"; exit 1; }
-      - name: AppImage (Linux)
-        if: matrix.name == 'linux'
-        run: ./packaging/make_appimage.sh "$VERSION" && cp dist/*.AppImage release/
-      - name: Test the AppImage (Linux)
-        if: matrix.name == 'linux'
-        run: ./release/MiniBook-Studio-${VERSION}-x86_64.AppImage --appimage-extract-and-run --selftest
-
-      - uses: actions/upload-artifact@v6
-        with:
-          name: MiniBook-Studio-${{ matrix.name }}
-          path: |
-            release/*.zip
-            release/*.exe
-            release/*.dmg
-            release/*.deb
-            release/*.AppImage
-          if-no-files-found: error
+      - name: Remove it again
+        run: sudo apt-get remove -y minibook-studio && test ! -e /opt/minibook-studio/venv
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: [build, linux-test, generic-test]
     runs-on: ubuntu-22.04
     permissions:
       contents: write
