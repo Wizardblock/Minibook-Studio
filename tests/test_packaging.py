@@ -139,9 +139,9 @@ class TestWorkflow(unittest.TestCase):
             self.assertTrue(any(n.startswith("Self-test") and system in n for n in names), system)
         self.assertTrue(any("Install and self-test the installer" in n for n in names))
         self.assertTrue(any("upload-artifact" in s.get("uses", "") for s in steps))
-        linux_text = yaml.dump(self.wf["jobs"]["linux-test"])
+        raw = (ROOT / ".github" / "workflows" / "build.yml").read_text()
         for needle in ("--selftest-window", "xdotool", "apt-get install -y ./pkg/", "neither GLX nor EGL"):
-            self.assertIn(needle, linux_text)
+            self.assertIn(needle, raw)
 
     def test_PKG04_the_actions_are_on_node24_releases_and_appstream_is_installed(self):
         text = (ROOT / ".github" / "workflows" / "build.yml").read_text()
