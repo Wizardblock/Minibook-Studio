@@ -1,6 +1,6 @@
 MiniBook Studio {version} for Mac (Apple Silicon, macOS 13.3 or later)
 
-1. Drag "MiniBook Studio" onto the Applications folder in this window.
+1. Open the .dmg file (MiniBook-Studio-{version}-macos-arm64.dmg) and drag "MiniBook Studio" onto the Applications folder.
 2. Open it from Applications. The first time, right-click (or Control-click) it and choose Open, then Open again.
    The app is not signed with an Apple developer certificate yet, so a plain double-click is refused.
    If you still see "cannot be opened": System Settings > Privacy & Security > "Open Anyway".

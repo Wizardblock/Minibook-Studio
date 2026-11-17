@@ -1,0 +1,17 @@
+MiniBook Studio {version} for Linux
+
+Two ways to install; pick one.
+
+A. Any distribution: MiniBook-Studio-{version}-x86_64.AppImage
+   Double-click it. (If your file manager asks, allow it to run: right-click > Properties > Permissions >
+   "Allow executing as program".) Nothing is installed; keep the file where you like.
+
+B. Debian, Ubuntu, Linux Mint: minibook-studio_{version}_all.deb
+   Double-click it and press Install. This needs an internet connection the first time (it fetches a few
+   Python libraries). MiniBook Studio then appears in your applications menu.
+
+To try it, drop samples/sample_library.csv onto the Books tab.
+
+If something goes wrong, the app keeps a log at ~/.cache/MiniBookStudio/minibook.log
+
+Project page: https://github.com/Wizardblock/Minibook-Studio

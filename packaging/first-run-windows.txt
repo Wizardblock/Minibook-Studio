@@ -1,11 +1,14 @@
-MiniBook Studio {version} for Windows (portable)
+MiniBook Studio {version} for Windows
 
-This is the no-install version: unzip it anywhere and run MiniBookStudio.exe.
-(Prefer a normal install with a Start menu entry? Use the MiniBook-Studio-Setup file instead.)
+1. Double-click MiniBook-Studio-Setup-{version}.exe and press Next. It installs for you only (no administrator
+   password needed) and adds a Start menu entry.
+2. Windows may say "Windows protected your PC" because the app is not signed yet.
+   Click "More info", then "Run anyway".
+3. To try it, drop samples\sample_library.csv onto the Books tab.
 
-Windows may say "Windows protected your PC" because the app is not signed yet.
-Click "More info", then "Run anyway".
+The window uses Microsoft's WebView2, which is built into Windows 11 and current Windows 10.
+If it is missing, the app tells you and links to the free download.
 
-To try it, drop samples\sample_library.csv onto the Books tab.
+If something goes wrong, the app keeps a log at %LOCALAPPDATA%\MiniBookStudio\Cache\minibook.log
 
 Project page: https://github.com/Wizardblock/Minibook-Studio

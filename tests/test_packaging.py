@@ -119,7 +119,8 @@ class TestWorkflow(unittest.TestCase):
         test = self.wf["jobs"]["linux-test"]
         self.assertEqual(test["needs"], "linux")
         self.assertEqual(set(test["strategy"]["matrix"]["os"]), {"ubuntu-22.04", "ubuntu-24.04"})
-        self.assertEqual(set(self.wf["jobs"]["release"]["needs"]), {"build", "linux-test", "generic-test"})
+        self.assertEqual(set(self.wf["jobs"]["release"]["needs"]), {"bundle", "linux-test", "generic-test"})
+        self.assertEqual(set(self.wf["jobs"]["bundle"]["needs"]), {"build", "appimage", "linux"})
 
     def test_PKG04_the_generic_linux_download_is_started_in_several_distributions(self):
         gen = self.wf["jobs"]["generic-test"]
@@ -164,53 +165,91 @@ class TestWorkflow(unittest.TestCase):
 
 
 class TestStage(unittest.TestCase):
-    def fake_dist(self, os_name):
+    def load(self, name):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(name, ROOT / "packaging" / "stage.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def fake_downloads(self, version="1.2.3", skip=()):
         d = Path(tempfile.mkdtemp())
-        if os_name == "windows":
-            (d / "MiniBookStudio").mkdir()
-            (d / "MiniBookStudio" / "MiniBookStudio.exe").write_text("x")
-        elif os_name == "macos":
-            (d / "MiniBook Studio.app" / "Contents").mkdir(parents=True)
-            (d / "MiniBook Studio.app" / "Contents" / "Info.plist").write_text("x")
+        for name in (f"MiniBook-Studio-Setup-{version}.exe", f"MiniBook-Studio-{version}-macos-arm64.dmg",
+                     f"MiniBook-Studio-{version}-x86_64.AppImage", f"minibook-studio_{version}_all.deb"):
+            if name not in skip:
+                (d / "some-artifact").mkdir(exist_ok=True)
+                (d / "some-artifact" / name).write_text("x")
         return d
 
-    def stage(self, os_name):
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("stage", ROOT / "packaging" / "stage.py")
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        out = Path(tempfile.mkdtemp())
-        return mod.stage(os_name, self.fake_dist(os_name), out, "1.2.3")
+    def test_PKG06_the_mac_disk_image_folder_has_the_app_the_sample_the_licence_and_the_notes(self):
+        mod = self.load("stage")
+        dist = Path(tempfile.mkdtemp())
+        (dist / "MiniBook Studio.app" / "Contents").mkdir(parents=True)
+        (dist / "MiniBook Studio.app" / "Contents" / "Info.plist").write_text("x")
+        folder = mod.stage("macos", dist, Path(tempfile.mkdtemp()), "1.2.3")
+        self.assertEqual(folder.name, "MiniBook-Studio-macos-1.2.3")
+        self.assertTrue((folder / "MiniBook Studio.app" / "Contents" / "Info.plist").exists())
+        self.assertTrue((folder / "samples" / "sample_library.csv").exists())
+        self.assertIn("Open Anyway", (folder / "READ ME FIRST.txt").read_text())
 
-    def test_PKG06_every_download_has_the_app_the_sample_the_licence_and_the_notes(self):
-        for os_name, expected in (("windows", "MiniBook Studio/MiniBookStudio.exe"),
-                                  ("macos", "MiniBook Studio.app/Contents/Info.plist")):
-            folder = self.stage(os_name)
-            want = {"windows": "MiniBook-Studio-windows-portable-1.2.3",
-                    "macos": "MiniBook-Studio-macos-1.2.3"}[os_name]
-            self.assertEqual(folder.name, want)
-            self.assertTrue((folder / expected).exists(), os_name)
-            self.assertTrue((folder / "samples" / "sample_library.csv").exists())
-            self.assertTrue((folder / "LICENSE").exists())
-            notes = (folder / "READ ME FIRST.txt").read_text()
+    def test_PKG06_every_system_gets_one_archive_with_installer_readme_sample_and_notes(self):
+        import tarfile
+        import zipfile
+        mod = self.load("stage2")
+        out = Path(tempfile.mkdtemp())
+        downloads = self.fake_downloads()
+        expected = {"windows": ("MiniBook-Studio-1.2.3-windows.zip", ["MiniBook-Studio-Setup-1.2.3.exe"], "More info"),
+                    "macos": ("MiniBook-Studio-1.2.3-macos.zip", ["MiniBook-Studio-1.2.3-macos-arm64.dmg"], "Open Anyway"),
+                    "linux": ("MiniBook-Studio-1.2.3-linux.tar.gz",
+                              ["MiniBook-Studio-1.2.3-x86_64.AppImage", "minibook-studio_1.2.3_all.deb"], "AppImage")}
+        for os_name, (archive_name, installers, note_word) in expected.items():
+            archive = mod.bundle(os_name, downloads, out, "1.2.3")
+            self.assertEqual(archive.name, archive_name)
+            folder = archive_name.rsplit(".", 2 if archive_name.endswith(".tar.gz") else 1)[0]
+            if archive_name.endswith(".zip"):
+                names = zipfile.ZipFile(archive).namelist()
+            else:
+                names = [m.name for m in tarfile.open(archive).getmembers()]
+            for need in installers + ["README.md", "samples/sample_library.csv", "LICENSE", "READ ME FIRST.txt"]:
+                self.assertIn(f"{folder}/{need}", names, (os_name, need))
+            notes = ""
+            if archive_name.endswith(".zip"):
+                notes = zipfile.ZipFile(archive).read(f"{folder}/READ ME FIRST.txt").decode()
+            else:
+                notes = tarfile.open(archive).extractfile(f"{folder}/READ ME FIRST.txt").read().decode()
             self.assertIn("1.2.3", notes)
             self.assertNotIn("{version}", notes)
+            self.assertIn(note_word, notes)
 
-    def test_PKG06_the_notes_explain_the_unsigned_warning_for_each_system(self):
-        self.assertIn("More info", self.stage("windows").joinpath("READ ME FIRST.txt").read_text())
-        self.assertIn("Open Anyway", self.stage("macos").joinpath("READ ME FIRST.txt").read_text())
+    def test_PKG06_the_linux_archive_keeps_the_appimage_runnable(self):
+        import tarfile
+        mod = self.load("stage3")
+        archive = mod.bundle("linux", self.fake_downloads(), Path(tempfile.mkdtemp()), "1.2.3")
+        member = tarfile.open(archive).getmember("MiniBook-Studio-1.2.3-linux/MiniBook-Studio-1.2.3-x86_64.AppImage")
+        self.assertTrue(member.mode & 0o111)
 
-    def test_PKG06_linux_has_no_staged_folder_because_it_ships_as_deb_and_appimage(self):
-        with self.assertRaises(ValueError):
-            self.stage("linux")
+    def test_PKG06_a_missing_installer_stops_the_bundle(self):
+        mod = self.load("stage4")
+        downloads = self.fake_downloads(skip=("MiniBook-Studio-Setup-1.2.3.exe",))
+        with self.assertRaises(FileNotFoundError):
+            mod.bundle("windows", downloads, Path(tempfile.mkdtemp()), "1.2.3")
 
     def test_PKG06_an_unknown_system_is_refused(self):
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("stage2", ROOT / "packaging" / "stage.py")
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
+        mod = self.load("stage5")
         with self.assertRaises(ValueError):
-            mod.stage("beos", Path("."), Path(tempfile.mkdtemp()), "1")
+            mod.bundle("beos", Path("."), Path(tempfile.mkdtemp()), "1")
+        with self.assertRaises(ValueError):
+            mod.stage("windows", Path("."), Path(tempfile.mkdtemp()), "1")
+
+    def test_PKG06_the_readme_download_section_names_the_bundles(self):
+        text = (ROOT / "README.md").read_text()
+        for name in ("-windows.zip", "-macos.zip", "-linux.tar.gz", "sample_library.csv"):
+            self.assertIn(name, text)
+
+    def test_PKG06_the_release_notes_use_the_same_names_as_the_bundles(self):
+        text = (ROOT / "packaging" / "release-notes.md").read_text()
+        for name in ("{version}-windows.zip", "{version}-macos.zip", "{version}-linux.tar.gz"):
+            self.assertIn(name, text)
 
 
 class TestInstallers(unittest.TestCase):
