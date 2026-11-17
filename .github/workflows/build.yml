@@ -54,12 +54,6 @@ jobs:
         run: |
           dist/MiniBookStudio/MiniBookStudio.exe --selftest --log selftest.log || { cat selftest.log; exit 1; }
           cat selftest.log
-      - name: Portable zip (Windows)
-        if: matrix.name == 'windows'
-        shell: pwsh
-        run: |
-          python packaging/stage.py --os windows --dist dist --out release --version $env:VERSION
-          Compress-Archive -Path "release/MiniBook-Studio-windows-portable-$env:VERSION" -DestinationPath "release/MiniBook-Studio-windows-portable-$env:VERSION.zip"
       - name: Installer (Windows)
         if: matrix.name == 'windows'
         shell: pwsh
@@ -93,7 +87,6 @@ jobs:
         with:
           name: MiniBook-Studio-${{ matrix.name }}
           path: |
-            release/*.zip
             release/*.exe
             release/*.dmg
           if-no-files-found: error
@@ -229,9 +222,40 @@ jobs:
       - name: Remove it again
         run: sudo apt-get remove -y minibook-studio && test ! -e /opt/minibook-studio/venv
 
+  bundle:
+    needs: [build, appimage, linux]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Read the version
+        run: echo "VERSION=$(python -c "from minibook.about import VERSION; print(VERSION)")" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v7
+        with:
+          path: downloads
+          merge-multiple: true
+      - name: One download per system (installer + README + sample CSV)
+        run: |
+          ls -l downloads
+          python packaging/stage.py bundle --downloads downloads --out bundles --version "$VERSION"
+          ls -l bundles
+      - name: Check every bundle holds what it should
+        run: |
+          unzip -l "bundles/MiniBook-Studio-$VERSION-windows.zip" | grep -E "Setup-$VERSION.exe|README.md|sample_library.csv"
+          unzip -l "bundles/MiniBook-Studio-$VERSION-macos.zip" | grep -E "arm64.dmg|README.md|sample_library.csv"
+          tar -tvzf "bundles/MiniBook-Studio-$VERSION-linux.tar.gz" | grep -E "AppImage|\.deb|README.md|sample_library.csv"
+          tar -tvzf "bundles/MiniBook-Studio-$VERSION-linux.tar.gz" | grep AppImage | grep -q "^-rwx"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: MiniBook-Studio-release-bundles
+          path: bundles/*
+          if-no-files-found: error
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [build, linux-test, generic-test]
+    needs: [bundle, linux-test, generic-test]
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -239,8 +263,8 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/download-artifact@v7
         with:
+          name: MiniBook-Studio-release-bundles
           path: downloads
-          merge-multiple: true
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}

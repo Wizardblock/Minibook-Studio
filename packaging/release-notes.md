@@ -1,12 +1,13 @@
 ## Which file do I download?
 
+Each download is one archive holding the installer, the README and a sample CSV to try (`samples/sample_library.csv`).
+
 | You use | Download | Then |
 |---|---|---|
-| **Windows** | `MiniBook-Studio-Setup-{version}.exe` | Double-click, press Next. Choose "More info" then "Run anyway" if Windows warns you (the app is not signed yet). |
-| **Windows, no install** | `MiniBook-Studio-windows-portable-{version}.zip` | Unzip and run `MiniBookStudio.exe`. |
-| **Mac** (Apple Silicon, macOS 13.3 or later) | `MiniBook-Studio-{version}-macos-arm64.dmg` | Drag the app onto Applications. First time: right-click the app, Open. |
-| **Linux Mint, Ubuntu, Debian** | `minibook-studio_{version}_all.deb` | Double-click it and press Install. It finds what it needs (needs an internet connection the first time). |
-| **Any other Linux** (Fedora, Arch, openSUSE, ...) | `MiniBook-Studio-{version}-x86_64.AppImage` | Right-click, Properties, Permissions, tick "Allow executing", then double-click. |
+| **Windows** | `MiniBook-Studio-{version}-windows.zip` | Unzip, double-click `MiniBook-Studio-Setup-{version}.exe`, press Next. Choose "More info" then "Run anyway" if Windows warns you (the app is not signed yet). |
+| **Mac** (Apple Silicon, macOS 13.3 or later) | `MiniBook-Studio-{version}-macos.zip` | Unzip, open the `.dmg`, drag the app onto Applications. First time: right-click the app, Open. |
+| **Linux** (any distribution) | `MiniBook-Studio-{version}-linux.tar.gz` | Extract it. Double-click the `.AppImage` (works on any distribution), or on Debian, Ubuntu or Mint double-click the `.deb` and press Install. |
 
-Try it with `samples/sample_library.csv` (in the install folder, or in the project's `samples` folder).
+The Windows and Linux downloads have been tried on real computers. The Mac download is checked by automated builds but is new on real Macs, so please report problems on the Issues page (include `~/Library/Caches/MiniBookStudio/minibook.log`).
+
 Checksums are in `SHA256SUMS.txt`.
