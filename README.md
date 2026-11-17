@@ -21,13 +21,13 @@ MiniBook Studio as its own desktop window, never in a web browser, and none need
 | System | Download | How |
 | --- | --- | --- |
 | Windows | `MiniBook-Studio-Setup-<version>.exe` | Double-click, then Next. A portable `.zip` is also there if you prefer no install. |
-| Mac (Apple Silicon) | `MiniBook-Studio-<version>-macos-arm64.dmg` | Open it and drag the app to Applications. |
+| Mac (Apple Silicon, macOS 13.3 or later) | `MiniBook-Studio-<version>-macos-arm64.dmg` | Open it and drag the app to Applications. |
 | Linux (Debian, Ubuntu, Mint) | `minibook-studio_<version>_all.deb` | Double-click to install; it uses your system's Python and fetches a few libraries the first time, so it needs internet. |
 | Linux (any other) | `MiniBook-Studio-<version>-x86_64.AppImage` | One file for any distribution. Right-click, Properties, Permissions, allow executing, then double-click. |
 
 The apps are not signed yet, so Windows and macOS ask you to confirm the first time you open one (see the
 **READ ME FIRST** note). Windows needs Microsoft's WebView2, which is built into Windows 11 and current Windows 10;
-if it is missing the app says so and links to the free download. Wine is not supported, because it has no WebView2.
+if it is missing the app says so and links to the free download. Wine is not supported, because it has no WebView2. On a Mac, the window uses the engine built into macOS, which needs macOS 13.3 (Ventura) or later; older versions are told so.
 If something goes wrong, the app shows a message and keeps a log in its cache folder.
 
 ## Run from source (Windows or Linux, Python 3.12)

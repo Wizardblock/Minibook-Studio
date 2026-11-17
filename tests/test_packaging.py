@@ -308,6 +308,19 @@ class TestFatal(unittest.TestCase):
             for key in ("MINIBOOK_PACKAGED", "PYWEBVIEW_GUI", "QT_API", "QTWEBENGINE_CHROMIUM_FLAGS", "QTWEBENGINE_DISABLE_SANDBOX"):
                 os.environ.pop(key, None)
 
+    def test_PKG08_an_old_macos_is_told_so_instead_of_getting_a_blank_window(self):
+        from minibook import fatal
+        self.assertTrue(fatal.mac_too_old(lambda: "12.5"))
+        self.assertTrue(fatal.mac_too_old(lambda: "13.2.1"))
+        self.assertFalse(fatal.mac_too_old(lambda: "13.3"))
+        self.assertFalse(fatal.mac_too_old(lambda: "14.0"))
+        self.assertFalse(fatal.mac_too_old(lambda: "15.1.1"))
+        self.assertFalse(fatal.mac_too_old(lambda: ""))            # unknown: never block
+        self.assertFalse(fatal.mac_too_old(lambda: "garbage"))
+
+    def test_PKG08_the_mac_app_declares_its_minimum_macos(self):
+        self.assertIn("LSMinimumSystemVersion", (ROOT / "packaging" / "minibook.spec").read_text())
+
     def test_PKG08_selftest_window_implies_selftest(self):
         fake.install()
         from minibook import gui, selftest

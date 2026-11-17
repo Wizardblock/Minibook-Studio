@@ -1,4 +1,4 @@
-MiniBook Studio {version} for Mac (Apple Silicon)
+MiniBook Studio {version} for Mac (Apple Silicon, macOS 13.3 or later)
 
 1. Drag "MiniBook Studio" onto the Applications folder in this window.
 2. Open it from Applications. The first time, right-click (or Control-click) it and choose Open, then Open again.

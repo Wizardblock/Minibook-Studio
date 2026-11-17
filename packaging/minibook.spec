@@ -54,4 +54,5 @@ if sys.platform == "darwin":
     app = BUNDLE(coll, name="MiniBook Studio.app", icon=icon,
                  bundle_identifier="io.github.wizardblock.minibookstudio",
                  info_plist={"CFBundleName": "MiniBook Studio", "CFBundleShortVersionString": VERSION,
-                             "CFBundleVersion": VERSION, "NSHighResolutionCapable": True})
+                             "CFBundleVersion": VERSION, "NSHighResolutionCapable": True,
+                             "LSMinimumSystemVersion": "13.3"})      # older macOS lacks the web engine features NiceGUI needs
