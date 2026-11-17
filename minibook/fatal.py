@@ -90,8 +90,33 @@ def show_error(title: str, message: str) -> None:
         pass
 
 
+MAC_MINIMUM = (13, 3)      # the window uses the web engine built into macOS; import maps (which the interface needs) arrived in 16.4
+
+
+def mac_version(read=None) -> tuple[int, ...] | None:
+    """The macOS version as numbers, or None when unknown (then we do not block anything)."""
+    try:
+        text = read() if read else __import__("platform").mac_ver()[0]
+        parts = tuple(int(x) for x in text.split(".") if x.isdigit())
+        return parts or None
+    except Exception:
+        return None
+
+
+def mac_too_old(read=None) -> bool:
+    version = mac_version(read)
+    return bool(version) and version < MAC_MINIMUM
+
+
 def check_window_support() -> bool:
-    """Packaged Windows build: the window needs WebView2. Say so plainly, and open its download page, if it is missing."""
+    """Packaged builds: the window needs a modern engine. On Windows that is WebView2, on a Mac it is the one built
+    into macOS 13.3 or later. Say so plainly instead of showing a blank 'this page needs JavaScript' window."""
+    if sys.platform == "darwin" and mac_too_old():
+        show_error("MiniBook Studio needs a newer macOS",
+                   "MiniBook Studio shows its window with the web engine built into macOS, and the version on this "
+                   f"Mac is too old. It needs macOS {MAC_MINIMUM[0]}.{MAC_MINIMUM[1]} (Ventura) or later.\n\n"
+                   "Updating macOS fixes this. Nothing else needs changing.")
+        return False
     if sys.platform != "win32" or webview2_installed():
         return True
     show_error("MiniBook Studio needs one more thing",
