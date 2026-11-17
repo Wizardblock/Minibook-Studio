@@ -273,5 +273,11 @@ jobs:
           sed "s/{version}/$VERSION/g" packaging/release-notes.md > notes.md
           cd downloads
           sha256sum * > SHA256SUMS.txt
-          gh release create "${{ github.ref_name }}" --repo "${{ github.repository }}" \
-            --title "MiniBook Studio ${{ github.ref_name }}" --notes-file ../notes.md --generate-notes *
+          TAG="${{ github.ref_name }}"; REPO="${{ github.repository }}"
+          if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            # a release made on the GitHub web page: fill it in with the downloads and notes
+            gh release upload "$TAG" --repo "$REPO" --clobber *
+            gh release edit "$TAG" --repo "$REPO" --title "MiniBook Studio $TAG" --notes-file ../notes.md
+          else
+            gh release create "$TAG" --repo "$REPO" --title "MiniBook Studio $TAG" --notes-file ../notes.md --generate-notes *
+          fi

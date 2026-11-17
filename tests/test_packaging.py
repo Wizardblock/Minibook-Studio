@@ -158,6 +158,12 @@ class TestWorkflow(unittest.TestCase):
         self.assertIn("SHA256SUMS", yaml.dump(rel))
         self.assertEqual(self.wf["permissions"], {"contents": "read"})     # read-only everywhere else
 
+    def test_PKG05_a_release_made_on_the_web_page_is_filled_in_rather_than_failing(self):
+        text = (ROOT / ".github" / "workflows" / "build.yml").read_text()
+        self.assertIn("gh release view", text)
+        self.assertIn("gh release upload", text)
+        self.assertIn("gh release create", text)
+
     def test_PKG05_pull_requests_run_the_tests_and_builds_but_never_release(self):
         triggers = self.wf[True]
         self.assertIn("pull_request", triggers)
