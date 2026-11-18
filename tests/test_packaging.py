@@ -164,6 +164,14 @@ class TestWorkflow(unittest.TestCase):
         self.assertIn("gh release upload", text)
         self.assertIn("gh release create", text)
 
+    def test_PKG05_only_the_archives_and_checksums_are_published_never_folders(self):
+        text = (ROOT / ".github" / "workflows" / "build.yml").read_text()
+        self.assertIn("bundles/*.zip", text)
+        self.assertIn("bundles/*.tar.gz", text)
+        self.assertNotIn("path: bundles/*\n", text)
+        self.assertIn("sha256sum *.zip *.tar.gz", text)
+        self.assertIn("*.zip *.tar.gz SHA256SUMS.txt", text)
+
     def test_PKG05_pull_requests_run_the_tests_and_builds_but_never_release(self):
         triggers = self.wf[True]
         self.assertIn("pull_request", triggers)

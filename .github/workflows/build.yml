@@ -250,7 +250,9 @@ jobs:
       - uses: actions/upload-artifact@v6
         with:
           name: MiniBook-Studio-release-bundles
-          path: bundles/*
+          path: |
+            bundles/*.zip
+            bundles/*.tar.gz
           if-no-files-found: error
 
   release:
@@ -272,12 +274,13 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           sed "s/{version}/$VERSION/g" packaging/release-notes.md > notes.md
           cd downloads
-          sha256sum * > SHA256SUMS.txt
+          ls -l
+          sha256sum *.zip *.tar.gz > SHA256SUMS.txt
           TAG="${{ github.ref_name }}"; REPO="${{ github.repository }}"
           if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
             # a release made on the GitHub web page: fill it in with the downloads and notes
-            gh release upload "$TAG" --repo "$REPO" --clobber *
+            gh release upload "$TAG" --repo "$REPO" --clobber *.zip *.tar.gz SHA256SUMS.txt
             gh release edit "$TAG" --repo "$REPO" --title "MiniBook Studio $TAG" --notes-file ../notes.md
           else
-            gh release create "$TAG" --repo "$REPO" --title "MiniBook Studio $TAG" --notes-file ../notes.md --generate-notes *
+            gh release create "$TAG" --repo "$REPO" --title "MiniBook Studio $TAG" --notes-file ../notes.md --generate-notes *.zip *.tar.gz SHA256SUMS.txt
           fi
